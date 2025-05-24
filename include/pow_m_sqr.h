@@ -23,8 +23,8 @@ typedef struct pow_m_sqr_s
 typedef pow_m_sqr latin_square;
 
 // will evalutate `M` multiple times !!
-#define GET_AS_MAT(M, i, j) ((M).arr[((M).rows[(i)]) * ((M).n) + ((M).cols[(j)])])
-#define GET_AS_VEC(M, idx) ((M).arr[(idx)])
+#define M_SQR_GET_AS_MAT(M, i, j) ((M).arr[((M).rows[(i)]) * ((M).n) + ((M).cols[(j)])])
+#define M_SQR_GET_AS_VEC(M, idx) ((M).arr[(idx)])
 
 /* ------------ magic squares of powers ---------------- */
 

@@ -21,7 +21,7 @@
 //   mpz_set_ui(ret, 0);
 //   for (uint64_t i = 0; i < M.n; ++i)
 //   {
-//     mpz_ui_pow_ui(curr, GET_AS_MAT(M, i, j), M.d);
+//     mpz_ui_pow_ui(curr, M_SQR_GET_AS_MAT(M, i, j), M.d);
 //     mpz_add(ret, ret, curr);
 //   }
 //   mpz_clear(curr);
@@ -34,7 +34,7 @@ uint64_t pow_m_sqr_sum_col(pow_m_sqr M, uint64_t j)
 {
   uint64_t acc = 0;
   for (uint64_t i = 0; i < M.n; ++i)
-    acc += ui_pow_ui(GET_AS_MAT(M, i, j), M.d);
+    acc += ui_pow_ui(M_SQR_GET_AS_MAT(M, i, j), M.d);
 
   return acc;
 }
@@ -49,7 +49,7 @@ uint64_t pow_m_sqr_sum_col(pow_m_sqr M, uint64_t j)
 //   mpz_set_ui(ret, 0);
 //   for (uint64_t j = 0; j < M.n; ++j)
 //   {
-//     mpz_ui_pow_ui(curr, GET_AS_MAT(M, i, j), M.d);
+//     mpz_ui_pow_ui(curr, M_SQR_GET_AS_MAT(M, i, j), M.d);
 //     mpz_add(ret, ret, curr);
 //   }
 //   mpz_clear(curr);
@@ -60,7 +60,7 @@ uint64_t pow_m_sqr_sum_row(pow_m_sqr M, uint64_t i)
 {
   uint64_t acc = 0;
   for (uint64_t j = 0; j < M.n; ++j)
-    acc += ui_pow_ui(GET_AS_MAT(M, i, j), M.d);
+    acc += ui_pow_ui(M_SQR_GET_AS_MAT(M, i, j), M.d);
 
   return acc;
 }
@@ -72,7 +72,7 @@ uint64_t pow_m_sqr_sum_row(pow_m_sqr M, uint64_t i)
 //   mpz_set_ui(ret, 0);
 //   for (uint64_t k = 0; k < M.n; ++k)
 //   {
-//     mpz_ui_pow_ui(curr, GET_AS_MAT(M, k, k), M.d);
+//     mpz_ui_pow_ui(curr, M_SQR_GET_AS_MAT(M, k, k), M.d);
 //     mpz_add(ret, ret, curr);
 //   }
 //   mpz_clear(curr);
@@ -83,7 +83,7 @@ uint64_t pow_m_sqr_sum_diag1(pow_m_sqr M)
 {
   uint64_t acc = 0;
   for (uint64_t k = 0; k < M.n; ++k)
-    acc += ui_pow_ui(GET_AS_MAT(M, k, k), M.d);
+    acc += ui_pow_ui(M_SQR_GET_AS_MAT(M, k, k), M.d);
 
   return acc;
 }
@@ -95,7 +95,7 @@ uint64_t pow_m_sqr_sum_diag1(pow_m_sqr M)
 //   mpz_set_ui(ret, 0);
 //   for (uint64_t k = 0; k < M.n; ++k)
 //   {
-//     mpz_ui_pow_ui(curr, GET_AS_MAT(M, k, M.n - k - 1), M.d);
+//     mpz_ui_pow_ui(curr, M_SQR_GET_AS_MAT(M, k, M.n - k - 1), M.d);
 //     mpz_add(ret, ret, curr);
 //   }
 //   mpz_clear(curr);
@@ -106,7 +106,7 @@ uint64_t pow_m_sqr_sum_diag2(pow_m_sqr M)
 {
   uint64_t acc = 0;
   for (uint64_t k = 0; k < M.n; ++k)
-    acc += ui_pow_ui(GET_AS_MAT(M, k, M.n - k - 1), M.d);
+    acc += ui_pow_ui(M_SQR_GET_AS_MAT(M, k, M.n - k - 1), M.d);
 
   return acc;
 }
@@ -116,8 +116,8 @@ uint64_t max_pow_m_sqr(pow_m_sqr M)
   uint64_t max = 0;
   for (uint64_t idx = 0; idx < M.n * M.n; ++idx)
   {
-    if (GET_AS_VEC(M, idx) > max)
-      max = GET_AS_VEC(M, idx);
+    if (M_SQR_GET_AS_VEC(M, idx) > max)
+      max = M_SQR_GET_AS_VEC(M, idx);
   }
   return max;
 }
@@ -132,7 +132,7 @@ uint8_t *nb_occurence_pow_m_sqr(pow_m_sqr M, uint64_t N)
   }
 
   for (uint64_t idx = 0; idx < M.n * M.n; ++idx)
-    occ[GET_AS_VEC(M, idx) - 1] += 1; // -1 to get them 0-indexed
+    occ[M_SQR_GET_AS_VEC(M, idx) - 1] += 1; // -1 to get them 0-indexed
 
   return occ;
 }
@@ -236,7 +236,7 @@ void mvpow_m_sqr_print(int y0, int x0, pow_m_sqr M)
   for (uint64_t j = 0; j < M.n; ++j)
     for (uint64_t i = 0; i < M.n; ++i)
     {
-      size_t l = snprintf(buff, 31, "%llu", GET_AS_MAT(M, i, j));
+      size_t l = snprintf(buff, 31, "%llu", M_SQR_GET_AS_MAT(M, i, j));
       if (l > max[j])
         max[j] = l;
     }
@@ -311,7 +311,7 @@ void mvpow_m_sqr_print(int y0, int x0, pow_m_sqr M)
 
     for (uint64_t j = 0; j < M.n; ++j)
     {
-      x += mvprintw(y, x, "%*llu", (int)max[j], GET_AS_MAT(M, i, j));
+      x += mvprintw(y, x, "%*llu", (int)max[j], M_SQR_GET_AS_MAT(M, i, j));
       x += dwidth + 1; // +1 for vertical seperator
     }
 
@@ -434,7 +434,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
   {
     heat_map = calloc(X, sizeof(uint8_t));
     for (uint64_t idx = 0; idx < progress; ++idx)
-      heat_map[GET_AS_VEC(base, idx)] = 1;
+      heat_map[M_SQR_GET_AS_VEC(base, idx)] = 1;
   }
 
   if (progress == base.n * base.n)
@@ -463,7 +463,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     int64_t partial_sum = 0;
     uint64_t i = (progress + 1) / base.n - 1; // -1 for 0-index
     for (uint64_t j = 0; j < base.n - 1; ++j)
-      partial_sum += ui_pow_ui(GET_AS_MAT(base, i, j), base.d);
+      partial_sum += ui_pow_ui(M_SQR_GET_AS_MAT(base, i, j), base.d);
 
     mpz_t diff;
     mpz_init_set_si(diff, mu - partial_sum);
@@ -477,34 +477,34 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     mpz_clear(diff);
   }
 
-  for (GET_AS_VEC(base, progress) = 1; GET_AS_VEC(base, progress) <= X; ++GET_AS_VEC(base, progress))
+  for (M_SQR_GET_AS_VEC(base, progress) = 1; M_SQR_GET_AS_VEC(base, progress) <= X; ++M_SQR_GET_AS_VEC(base, progress))
   {
-    // printf("%llu", GET_AS_VEC(base, progress));
-    if (heat_map[GET_AS_VEC(base, progress)])
+    // printf("%llu", M_SQR_GET_AS_VEC(base, progress));
+    if (heat_map[M_SQR_GET_AS_VEC(base, progress)])
     {
       mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_boards_from_progress(base.n, X, progress));
       continue;
     }
-    heat_map[GET_AS_VEC(base, progress)] = 1;
+    heat_map[M_SQR_GET_AS_VEC(base, progress)] = 1;
 
     uint8_t flags = is_valid_partial_pow_m_sqr(base, progress);
     if (flags == PARTIAL_M_SQR_NEXT)
     {
       mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_boards_from_progress(base.n, X, progress));
-      heat_map[GET_AS_VEC(base, progress)] = 0;
+      heat_map[M_SQR_GET_AS_VEC(base, progress)] = 0;
       continue;
     }
     else if (flags == PARTIAL_M_SQR_BREAK)
     {
       mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_boards_from_progress(base.n, X, progress));
-      heat_map[GET_AS_VEC(base, progress)] = 0;
+      heat_map[M_SQR_GET_AS_VEC(base, progress)] = 0;
       break;
     }
 
     if (search_pow_m_sqr(base, X, progress + 1, heat_map, perf))
       return 1;
 
-    heat_map[GET_AS_VEC(base, progress)] = 0;
+    heat_map[M_SQR_GET_AS_VEC(base, progress)] = 0;
   }
 
   return 0;
@@ -554,13 +554,13 @@ void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square
         {
           latin_square P_j = GET_AS_VEC_IF_NONNULL(P, j);
           latin_square Q_i = GET_AS_VEC_IF_NONNULL(Q, i);
-          uint64_t P_jiv = GET_AS_MAT(P_j, i, v);
-          uint64_t Q_iju = GET_AS_MAT(Q_i, j, u);
+          uint64_t P_jiv = M_SQR_GET_AS_MAT(P_j, i, v);
+          uint64_t Q_iju = M_SQR_GET_AS_MAT(Q_i, j, u);
           uint64_t a_idx = TAXI_GET_AS_MAT(a, j, P_jiv);
           uint64_t b_idx = TAXI_GET_AS_MAT(b, i, Q_iju);
           // if (i == 0 && j == 0 && u == 0 && v == 0)
           // printf("M[%llu, %llu] = %llu, %llu", i * a.s + u, j * a.r + v, a_idx, b_idx);
-          GET_AS_MAT(M, i * a.s + u, j * a.r + v) = a_idx * b_idx;
+          M_SQR_GET_AS_MAT(M, i * a.s + u, j * a.r + v) = a_idx * b_idx;
         }
 
   return;
@@ -577,7 +577,7 @@ void permute_cols(pow_m_sqr M, uint64_t *permut)
 
   for (uint64_t i = 0; i < M.n; ++i)
     for (uint64_t j = 0; j < M.n; ++j)
-      GET_AS_MAT(M, i, permut[j]) = arr_copy[i * M.n + j];
+      M_SQR_GET_AS_MAT(M, i, permut[j]) = arr_copy[i * M.n + j];
 
   free(M.arr);
   M.arr = arr_copy;
@@ -595,7 +595,7 @@ void permute_lines(pow_m_sqr M, uint64_t *permut)
 
   for (uint64_t i = 0; i < M.n; ++i)
     for (uint64_t j = 0; j < M.n; ++j)
-      GET_AS_MAT(M, permut[i], j) = arr_copy[i * M.n + j];
+      M_SQR_GET_AS_MAT(M, permut[i], j) = arr_copy[i * M.n + j];
 
   free(arr_copy);
 
@@ -730,13 +730,13 @@ void search_pow_m_sqr_from_pow_semi_m_sqr(pow_m_sqr M)
 void generate_siamese(pow_m_sqr M)
 {
   for (uint64_t idx = 0; idx < M.n * M.n; ++idx)
-    GET_AS_VEC(M, idx) = 0;
+    M_SQR_GET_AS_VEC(M, idx) = 0;
 
   int64_t i = 0, j = (M.n - 1) / 2;
   for (uint64_t idx = 1; idx <= M.n * M.n; ++idx)
   {
-    GET_AS_MAT(M, i, j) = idx;
-    if (GET_AS_MAT(M, (i + M.n - 1) % M.n, (j + 1) % M.n) != 0)
+    M_SQR_GET_AS_MAT(M, i, j) = idx;
+    if (M_SQR_GET_AS_MAT(M, (i + M.n - 1) % M.n, (j + 1) % M.n) != 0)
       // spot is full: go down
       i = (i + 1) % M.n;
     else // move up right

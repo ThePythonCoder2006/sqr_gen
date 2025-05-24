@@ -39,6 +39,6 @@ void standart_latin_square(latin_square P)
 {
   for (uint64_t i = 0; i < P.n; ++i)
     for (uint64_t j = 0; j < P.n; ++j)
-      GET_AS_MAT(P, i, j) = (j + i) % (P.n);
+      M_SQR_GET_AS_MAT(P, i, j) = (j + i) % (P.n);
   return;
 }

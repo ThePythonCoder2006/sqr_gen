@@ -6,41 +6,39 @@ ODIR := $(SRCDIR)/obj
 IDIR := ./include
 LDIR := ./libs
 
-CCFLAGS := -Wall -Wextra -pedantic -ggdb
+CCFLAGS := -Wall -Wextra -pedantic
 IFLAGS := -I$(IDIR)
 LFLAGS := -L$(LDIR) -lgmp -lcurses
-CFLAGS := $(CCFLAGS) $(IFLAGS)# -D__DEBUG__
+CFLAGS := $(CCFLAGS) $(IFLAGS)
+DBFLAGS := -ggdb -D__DEBUG__
 
 SRC := $(wildcard $(SRCDIR)/*.c)
 OFILES := $(SRC:$(SRCDIR)/%.c=$(ODIR)/%.o)
+DB_OFILES := $(OFILES:%.o=%_db.o)
 HFILES := $(wildcard $(IDIR)/*.h)
 
 TRGT := $(BINDIR)/main.exe
+TRGT_DB := $(TRGT:%.exe=%_db.exe)
 
 .PHONY: all run db
 
 all: run Makefile
 
-run: $(TRGT) $(HFILES) Makefile
+run: $(TRGT) Makefile
 	./$<
 
-db: $(TRGT) Makefile
+db: $(TRGT_DB) Makefile
 	gdb ./$<
 
 $(TRGT): $(OFILES) | $(BINDIR) $(ODIR)
 	$(CC) $^ -o $@ $(CFLAGS) $(LFLAGS)
+$(TRGT_DB): $(DB_OFILES) | $(BINDIR) $(ODIR)
+	$(CC) $^ -o $@ $(CFLAGS) $(DBFLAGS) $(LFLAGS)
 
 $(ODIR)/%.o: $(SRCDIR)/%.c $(HFILES) Makefile | $(ODIR)
 	$(CC) $< -c -o $@ $(CFLAGS)
+$(ODIR)/%_db.o: $(SRCDIR)/%.c $(HFILES) Makefile | $(ODIR)
+	$(CC) $< -c -o $@ $(CFLAGS) $(DBFLAGS)
 
 $(BINDIR) $(ODIR):
 	mkdir "$@"
-
-# curses: $(BINDIR)/test_curses
-#   ./$^
-
-# $(BINDIR)/test_curses: test_curses.c
-#   $(CC) $< -o $@ $(CFLAGS) 
-
-# GPT: GPT.c $(SRCDIR)/pow_m_sqr.c $(SRCDIR)/latin_squares.c
-#  	$(CC) $^ -o $@ $(CFLAGS)

@@ -43,7 +43,7 @@ bool iterate_over_all_square_callback_inside(state *s, latin_square P, uint64_t 
     return false; // continue searching all solutions
   }
 
-  if (GET_AS_MAT(P, row, col) != 0)
+  if (M_SQR_GET_AS_MAT(P, row, col) != 0)
   {
     // Move to next cell
     if (col == P.n - 1)
@@ -56,7 +56,7 @@ bool iterate_over_all_square_callback_inside(state *s, latin_square P, uint64_t 
   {
     if (!(s->usedInRow[row][num]) && !(s->usedInCol[col][num]))
     {
-      GET_AS_MAT(P, row, col) = num;
+      M_SQR_GET_AS_MAT(P, row, col) = num;
       s->usedInRow[row][num] = true;
       s->usedInCol[col][num] = true;
 
@@ -65,7 +65,7 @@ bool iterate_over_all_square_callback_inside(state *s, latin_square P, uint64_t 
                                    : iterate_over_all_square_callback_inside(s, P, row, col + 1, callback);
 
       // Backtrack
-      GET_AS_MAT(P, row, col) = 0;
+      M_SQR_GET_AS_MAT(P, row, col) = 0;
       s->usedInRow[row][num] = false;
       s->usedInCol[col][num] = false;
 
@@ -124,7 +124,7 @@ int main()
   // Fix first row: {1, 2, ..., n}
   for (uint64_t col = 0; col < P.n; col++)
   {
-    GET_AS_MAT(P, 0, col) = col + 1;
+    M_SQR_GET_AS_MAT(P, 0, col) = col + 1;
     usedInRow[0][col + 1] = true;
     usedInCol[col][col + 1] = true;
   }

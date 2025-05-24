@@ -24,25 +24,25 @@ int main2(int argc, char **argv)
   pow_m_sqr test4_2 = {0};
   pow_m_sqr_init(&test4_2, 4, 2);
 
-  GET_AS_MAT(test4_2, 0, 0) = 11;
-  GET_AS_MAT(test4_2, 0, 1) = 59;
-  GET_AS_MAT(test4_2, 0, 2) = 17;
-  GET_AS_MAT(test4_2, 0, 3) = 68;
+  M_SQR_GET_AS_MAT(test4_2, 0, 0) = 11;
+  M_SQR_GET_AS_MAT(test4_2, 0, 1) = 59;
+  M_SQR_GET_AS_MAT(test4_2, 0, 2) = 17;
+  M_SQR_GET_AS_MAT(test4_2, 0, 3) = 68;
 
-  GET_AS_MAT(test4_2, 1, 0) = 77;
-  GET_AS_MAT(test4_2, 1, 1) = 28;
-  GET_AS_MAT(test4_2, 1, 2) = 31;
-  GET_AS_MAT(test4_2, 1, 3) = 29;
+  M_SQR_GET_AS_MAT(test4_2, 1, 0) = 77;
+  M_SQR_GET_AS_MAT(test4_2, 1, 1) = 28;
+  M_SQR_GET_AS_MAT(test4_2, 1, 2) = 31;
+  M_SQR_GET_AS_MAT(test4_2, 1, 3) = 29;
 
-  GET_AS_MAT(test4_2, 2, 0) = 8;
-  GET_AS_MAT(test4_2, 2, 1) = 23;
-  GET_AS_MAT(test4_2, 2, 2) = 79;
-  GET_AS_MAT(test4_2, 2, 3) = 41;
+  M_SQR_GET_AS_MAT(test4_2, 2, 0) = 8;
+  M_SQR_GET_AS_MAT(test4_2, 2, 1) = 23;
+  M_SQR_GET_AS_MAT(test4_2, 2, 2) = 79;
+  M_SQR_GET_AS_MAT(test4_2, 2, 3) = 41;
 
-  GET_AS_MAT(test4_2, 3, 0) = 49;
-  GET_AS_MAT(test4_2, 3, 1) = 61;
-  GET_AS_MAT(test4_2, 3, 2) = 32;
-  GET_AS_MAT(test4_2, 3, 3) = 37;
+  M_SQR_GET_AS_MAT(test4_2, 3, 0) = 49;
+  M_SQR_GET_AS_MAT(test4_2, 3, 1) = 61;
+  M_SQR_GET_AS_MAT(test4_2, 3, 2) = 32;
+  M_SQR_GET_AS_MAT(test4_2, 3, 3) = 37;
 
   initscr();
   mvpow_m_sqr_print(0, 0, test4_2);
