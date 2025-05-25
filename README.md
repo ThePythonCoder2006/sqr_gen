@@ -1,2 +1,8 @@
 # sqr_gen
-generating magic squares of powers in c
+Generating magic squares of powers in c
+
+# Quick start
+Compile and run with
+```(shell)
+make
+```

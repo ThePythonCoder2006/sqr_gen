@@ -93,6 +93,39 @@ uint8_t is_taxicab(taxicab T)
   return 1;
 }
 
+uint8_t taxicab_cross_products_are_distinct(taxicab a, taxicab b)
+{
+  assert(a.r == b.s && a.s == b.r);
+
+  uint64_t m = 0;
+  for (uint32_t i = 0; i < a.r; ++i)
+    for (uint32_t j = 0; j < a.s; ++j)
+      for (uint32_t u = 0; u < b.r; ++u)
+        for (uint32_t v = 0; v < b.s; ++v)
+          if (TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v) > m)
+            m = TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v);
+
+  uint8_t *counts = calloc(m, sizeof(uint8_t));
+  if (counts == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  for (uint32_t i = 0; i < a.r; ++i)
+    for (uint32_t j = 0; j < a.s; ++j)
+      for (uint32_t u = 0; u < b.r; ++u)
+        for (uint32_t v = 0; v < b.s; ++v)
+        {
+          if (counts[TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v)] > 0)
+            return 0;
+          counts[TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v)] = 1;
+        }
+
+  free(counts);
+  return 1;
+}
+
 // uint8_t is_pow_m_sqr(pow_m_sqr M)
 // {
 //   return check_sums(M) && pow_m_sqr_is_distinct(M);

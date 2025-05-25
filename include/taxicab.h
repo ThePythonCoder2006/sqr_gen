@@ -25,6 +25,7 @@ typedef struct
 #define TAXI_GET_AS_VEC(T, idx) ((T).arr[(idx)])
 
 uint8_t is_taxicab(taxicab T);
+uint8_t taxicab_cross_products_are_distinct(taxicab a, taxicab b);
 int taxicab_init(taxicab *T, uint64_t r, uint64_t s, uint64_t d);
 void mvtaxicab_print(int y0, int x0, taxicab T);
 void taxicab_clear(taxicab *T);

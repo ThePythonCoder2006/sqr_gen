@@ -7,7 +7,10 @@
 #include "perf_counter.h"
 #include "taxicab.h"
 #include "latin_squares.h"
+#include "find_sets.h"
 
+#define NOB_STRIP_PREFIX
+#include "nob.h"
 #include "gmp.h"
 #include "curses.h"
 
@@ -192,7 +195,7 @@ uint8_t is_pow_semi_m_sqr(pow_m_sqr M)
       return 0;
   }
 
-  return 1;
+  return pow_m_sqr_is_distinct(M);
 }
 
 uint8_t is_pow_m_sqr(pow_m_sqr M)
@@ -517,6 +520,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
  * P and Q are array of respectively `a.s` and `a.r` latin squares
  * P[j] should be of size `a.r` x `a.r`
  * Q[i] should be of size `a.s` x `a.s`
+ * P and Q are allowed to be NULL, in that case, the standart latin squares will be used everywhere
  * `a.r` must be equal to `b.s` and `a.s` must be equal to `b.r`
  */
 void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square *P, latin_square *Q)
@@ -754,6 +758,55 @@ void generate_siamese(pow_m_sqr M)
   return;
 }
 
+uint8_t set_has_magic_sum(uint8_t *selected, pow_m_sqr M)
+{
+  uint64_t mu = pow_m_sqr_sum_row(M, 0);
+  uint64_t acc = 0;
+  for (uint32_t i = 0; i < M.n; ++i)
+    for (uint32_t j = 0; j < M.n; ++j)
+      if (GET_AS_MAT(selected, i, j, M.n))
+        acc += ui_pow_ui(M_SQR_GET_AS_MAT(M, i, j), M.d);
+
+  return mu == acc;
+}
+
+typedef struct
+{
+  uint32_t i, j;
+} position;
+
+typedef struct da_sets_s
+{
+  position **items;
+  size_t count;
+  size_t capacity;
+  uint32_t n; // size of each set
+} da_sets;
+
+typedef struct pow_m_sqr_and_da_sets_packed_s
+{
+  pow_m_sqr *M;
+  da_sets *rels;
+} pow_m_sqr_and_da_sets_packed;
+
+uint8_t search_pow_m_sqr_from_taxicab_iterate_over_sets_callback(uint8_t *selected, uint32_t n, void *data)
+{
+  pow_m_sqr_and_da_sets_packed *pack = (pow_m_sqr_and_da_sets_packed *)data;
+
+  if (set_has_magic_sum(selected, *(pack->M)))
+  {
+    position *set = calloc(n, sizeof(position));
+    uint32_t idx = 0;
+    for (uint32_t i = 0; i < n; ++i)
+      for (uint32_t j = 0; j < n; ++j)
+        if (GET_AS_MAT(selected, i, j, n))
+          set[idx++] = (position){.i = i, .j = j};
+    da_append((pack->rels), set);
+  }
+  // printf("%u\n", pack->rels->count);
+  return 1; // pack->rels->count < 1;
+}
+
 void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
 {
   assert(a.r == b.s && a.s == b.r);
@@ -761,5 +814,20 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
   assert(M.n == a.r * a.s);
 
   M.d = a.d;
+
+  // fill M with a semi magic square from standart latin squares
+  pow_semi_m_sqr_from_taxicab(M, a, b, NULL, NULL);
+
+  da_sets rels = {.n = M.n};
+  pow_m_sqr_and_da_sets_packed pack = {.M = &M, .rels = &rels};
+  iterate_over_sets_callback(a.r, a.s, search_pow_m_sqr_from_taxicab_iterate_over_sets_callback, (void *)&pack);
+
+  da_foreach(position *, rel, &rels)
+  {
+    for (uint32_t k = 0; k < rels.n; ++k)
+      printf("(%u, %u) ", (*rel)[k].i, (*rel)[k].j);
+    putchar('\n');
+  }
+
   return;
 }

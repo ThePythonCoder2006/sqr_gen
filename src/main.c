@@ -8,10 +8,13 @@
 #include "pow_m_sqr.h"
 #include "taxicab.h"
 #include "find_taxicab.h"
+#include "find_sets.h"
 
 #define __PERF_COUNTER_IMPLEMENTATION__
 #include "perf_counter.h"
 
+#define NOB_IMPLEMENTATION
+#include "nob.h"
 #include "GMP.h"
 #include "curses.h"
 
@@ -73,57 +76,56 @@ int main2(int argc, char **argv)
 int main(int argc, char **argv)
 {
   (void)argc, (void)argv;
-  taxicab T_4_4_2 = {0};
-  taxicab_init(&T_4_4_2, 3, 3, 2);
-  find_taxicab(T_4_4_2);
+  taxicab a = {0};
+  taxicab_init(&a, 4, 4, 4);
+  // find_taxicab(a);
   // printf("%u\n", __LINE__);
 
-  // TAXI_GET_AS_MAT(T_4_4_2, 0, 0) = 2;
-  // TAXI_GET_AS_MAT(T_4_4_2, 0, 1) = 21;
-  // TAXI_GET_AS_MAT(T_4_4_2, 0, 2) = 29;
-  // TAXI_GET_AS_MAT(T_4_4_2, 0, 3) = 32;
+  TAXI_GET_AS_MAT(a, 0, 0) = 2;
+  TAXI_GET_AS_MAT(a, 0, 1) = 21;
+  TAXI_GET_AS_MAT(a, 0, 2) = 29;
+  TAXI_GET_AS_MAT(a, 0, 3) = 32;
 
-  // TAXI_GET_AS_MAT(T_4_4_2, 1, 0) = 7;
-  // TAXI_GET_AS_MAT(T_4_4_2, 1, 1) = 23;
-  // TAXI_GET_AS_MAT(T_4_4_2, 1, 2) = 24;
-  // TAXI_GET_AS_MAT(T_4_4_2, 1, 3) = 34;
+  TAXI_GET_AS_MAT(a, 1, 0) = 7;
+  TAXI_GET_AS_MAT(a, 1, 1) = 23;
+  TAXI_GET_AS_MAT(a, 1, 2) = 24;
+  TAXI_GET_AS_MAT(a, 1, 3) = 34;
 
-  // TAXI_GET_AS_MAT(T_4_4_2, 2, 0) = 8;
-  // TAXI_GET_AS_MAT(T_4_4_2, 2, 1) = 9;
-  // TAXI_GET_AS_MAT(T_4_4_2, 2, 2) = 16;
-  // TAXI_GET_AS_MAT(T_4_4_2, 2, 3) = 37;
+  TAXI_GET_AS_MAT(a, 2, 0) = 8;
+  TAXI_GET_AS_MAT(a, 2, 1) = 9;
+  TAXI_GET_AS_MAT(a, 2, 2) = 16;
+  TAXI_GET_AS_MAT(a, 2, 3) = 37;
 
-  // TAXI_GET_AS_MAT(T_4_4_2, 3, 0) = 14;
-  // TAXI_GET_AS_MAT(T_4_4_2, 3, 1) = 26;
-  // TAXI_GET_AS_MAT(T_4_4_2, 3, 2) = 27;
-  // TAXI_GET_AS_MAT(T_4_4_2, 3, 3) = 31;
+  TAXI_GET_AS_MAT(a, 3, 0) = 14;
+  TAXI_GET_AS_MAT(a, 3, 1) = 26;
+  TAXI_GET_AS_MAT(a, 3, 2) = 27;
+  TAXI_GET_AS_MAT(a, 3, 3) = 31;
 
-  taxicab T_4_4_2_prime = {0};
-  taxicab_init(&T_4_4_2_prime, 3, 3, 2);
-  find_taxicab(T_4_4_2_prime);
-  // printf("%u\n", __LINE__);
-  while (memcmp(T_4_4_2.arr, T_4_4_2_prime.arr, T_4_4_2.r * T_4_4_2.s * sizeof(*(T_4_4_2.arr))) == 0)
-    find_taxicab(T_4_4_2_prime);
+  taxicab b = {0};
+  taxicab_init(&b, 4, 4, 4);
+  // do
+  //   find_taxicab(b);
+  // while (!taxicab_cross_products_are_distinct(a, b));
 
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 0, 0) = 3;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 0, 1) = 85;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 0, 2) = 97;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 0, 3) = 116;
+  TAXI_GET_AS_MAT(b, 0, 0) = 3;
+  TAXI_GET_AS_MAT(b, 0, 1) = 85;
+  TAXI_GET_AS_MAT(b, 0, 2) = 97;
+  TAXI_GET_AS_MAT(b, 0, 3) = 116;
 
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 1, 0) = 23;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 1, 1) = 25;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 1, 2) = 98;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 1, 3) = 123;
+  TAXI_GET_AS_MAT(b, 1, 0) = 23;
+  TAXI_GET_AS_MAT(b, 1, 1) = 25;
+  TAXI_GET_AS_MAT(b, 1, 2) = 98;
+  TAXI_GET_AS_MAT(b, 1, 3) = 123;
 
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 2, 0) = 43;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 2, 1) = 81;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 2, 2) = 95;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 2, 3) = 118;
+  TAXI_GET_AS_MAT(b, 2, 0) = 43;
+  TAXI_GET_AS_MAT(b, 2, 1) = 81;
+  TAXI_GET_AS_MAT(b, 2, 2) = 95;
+  TAXI_GET_AS_MAT(b, 2, 3) = 118;
 
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 3, 0) = 45;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 3, 1) = 73;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 3, 2) = 106;
-  // TAXI_GET_AS_MAT(T_4_4_2_prime, 3, 3) = 113;
+  TAXI_GET_AS_MAT(b, 3, 0) = 45;
+  TAXI_GET_AS_MAT(b, 3, 1) = 73;
+  TAXI_GET_AS_MAT(b, 3, 2) = 106;
+  TAXI_GET_AS_MAT(b, 3, 3) = 113;
 
 #if 0
   initscr();
@@ -163,27 +165,20 @@ int main(int argc, char **argv)
   clear();
 #endif
 
-  // taxicab T_4_4_2 = {0};
-  // taxicab_init(&T_4_4_2, 4, 4, 4);
+  // taxicab a = {0};
+  // taxicab_init(&a, 4, 4, 4);
 
 #ifndef __DEBUG__
   initscr();
   // printf("%u\n", __LINE__);
-#endif
-
-  // perf_counter perf = {.boards_tested = 0};
-  // timer_start(&(perf.time));
-  // search_taxicab(T_4_4_2, 37, 0, NULL, &perf, 0);
-
-#ifndef __DEBUG__
   clear();
-  mvtaxicab_print(0, 0, T_4_4_2);
+  mvtaxicab_print(0, 0, a);
   // printf("%u\n", __LINE__);
-  printw("is%s a (%llu, %llu, %llu)-taxicab\n", is_taxicab(T_4_4_2) ? "" : " not", T_4_4_2.r, T_4_4_2.s, T_4_4_2.d);
+  printw("is%s a (%llu, %llu, %llu)-taxicab\n", is_taxicab(a) ? "" : " not", a.r, a.s, a.d);
   // printf("%u\n", __LINE__);
-  mvtaxicab_print(0, 30, T_4_4_2_prime);
+  mvtaxicab_print(0, 30, b);
   // printf("%u\n", __LINE__);
-  printw("is%s a (%llu, %llu, %llu)-taxicab\n", is_taxicab(T_4_4_2_prime) ? "" : " not", T_4_4_2_prime.r, T_4_4_2_prime.s, T_4_4_2_prime.d);
+  printw("is%s a (%llu, %llu, %llu)-taxicab\n", is_taxicab(b) ? "" : " not", b.r, b.s, b.d);
   // printf("%u\n", __LINE__);
   getch();
   // printw("global average speed was: ");
@@ -198,28 +193,37 @@ int main(int argc, char **argv)
 
   // getch();
 
-  pow_m_sqr sq_16_4 = {0};
-  pow_m_sqr_init(&sq_16_4, 9, 2);
+  pow_m_sqr sq = {0};
+  pow_m_sqr_init(&sq, 16, 4);
 
-  pow_semi_m_sqr_from_taxicab(sq_16_4, T_4_4_2, T_4_4_2_prime, NULL, NULL);
+  pow_semi_m_sqr_from_taxicab(sq, a, b, NULL, NULL);
 
+#ifndef __DEBUG__
   clear();
-  mvpow_m_sqr_print(0, 0, sq_16_4);
-  printw("is%s a semi magic square of %u-th powers", is_pow_semi_m_sqr(sq_16_4) ? "" : " not", sq_16_4.d);
+  mvpow_m_sqr_print(0, 0, sq);
+  printw("is%s a semi magic square of %u-th powers", is_pow_semi_m_sqr(sq) ? "" : " not", sq.d);
 
   getch();
+#endif
 
   srand(69);
-  // search_pow_m_sqr_from_pow_semi_m_sqr(sq_16_4);
+// search_pow_m_sqr_from_pow_semi_m_sqr(sq_9_2);
+#ifndef __DEBUG__
   clear();
-  mvpow_m_sqr_print(0, 0, sq_16_4);
-  printw("is%s a magic square of %u-th powers", is_pow_m_sqr(sq_16_4) ? "" : " not", sq_16_4.d);
+  mvpow_m_sqr_print(0, 0, sq);
+  printw("is%s a magic square of %u-th powers", is_pow_m_sqr(sq) ? "" : " not", sq.d);
   getch();
+#endif
 
-  pow_m_sqr_clear(&sq_16_4);
+#ifndef __DEBUG__
   endwin();
+#endif
 
-  taxicab_clear(&T_4_4_2);
-  taxicab_clear(&T_4_4_2_prime);
+  search_pow_m_sqr_from_taxicabs(sq, a, b);
+
+  pow_m_sqr_clear(&sq);
+
+  taxicab_clear(&a);
+  taxicab_clear(&b);
   return 0;
 }

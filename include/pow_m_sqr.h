@@ -43,6 +43,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
 void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square *P, latin_square *Q);
 void search_pow_m_sqr_from_pow_semi_m_sqr(pow_m_sqr M);
 void generate_siamese(pow_m_sqr M);
+void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b);
 
 /* ------------ latin squares ---------------- */
 
