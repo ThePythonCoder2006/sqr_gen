@@ -3,19 +3,19 @@ CC := gcc
 SRCDIR := ./src
 BINDIR := ./bin
 ODIR := $(SRCDIR)/obj
-IDIR := ./include
+IDIR := ./include ./nob
 LDIR := ./libs
 
 CCFLAGS := -Wall -Wextra -pedantic
-IFLAGS := -I$(IDIR)
-LFLAGS := -L$(LDIR) -lgmp -lcurses
+IFLAGS := $(addprefix -I, $(IDIR))
+LFLAGS := $(addprefix -L, $(LDIR)) -lgmp -lcurses
 CFLAGS := $(CCFLAGS) $(IFLAGS)
 DBFLAGS := -ggdb -D__DEBUG__
 
 SRC := $(wildcard $(SRCDIR)/*.c)
 OFILES := $(SRC:$(SRCDIR)/%.c=$(ODIR)/%.o)
 DB_OFILES := $(OFILES:%.o=%_db.o)
-HFILES := $(wildcard $(IDIR)/*.h)
+HFILES := $(wildcard $(firstword $(IDIR))/*.h)
 
 TRGT := $(BINDIR)/main.exe
 TRGT_DB := $(TRGT:%.exe=%_db.exe)
