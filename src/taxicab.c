@@ -105,18 +105,21 @@ uint8_t taxicab_cross_products_are_distinct(taxicab a, taxicab b)
           if (TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v) > m)
             m = TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v);
 
-  uint8_t *counts = calloc(m, sizeof(uint8_t));
+  // +1 as counts[m] must be a valid entry
+  uint8_t *counts = calloc(m + 1, sizeof(uint8_t));
   if (counts == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
     exit(1);
   }
 
+  // printf("-------\n");
   for (uint32_t i = 0; i < a.r; ++i)
     for (uint32_t j = 0; j < a.s; ++j)
       for (uint32_t u = 0; u < b.r; ++u)
         for (uint32_t v = 0; v < b.s; ++v)
         {
+          // printf("%llu\n", TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v));
           if (counts[TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v)] > 0)
             return 0;
           counts[TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v)] = 1;

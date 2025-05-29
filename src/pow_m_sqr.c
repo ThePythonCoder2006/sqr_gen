@@ -1,3 +1,7 @@
+#define NOB_STRIP_PREFIX
+#include "nob.h"
+#undef ERROR
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -9,8 +13,6 @@
 #include "latin_squares.h"
 #include "find_sets.h"
 
-#define NOB_STRIP_PREFIX
-#include "nob.h"
 #include "gmp.h"
 #include "curses.h"
 
@@ -517,9 +519,9 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
 #define GET_AS_VEC_IF_NONNULL(l, idx) (l == NULL ? l##_standart : l[idx])
 
 /*
- * P and Q are array of respectively `a.s` and `a.r` latin squares
- * P[j] should be of size `a.r` x `a.r`
- * Q[i] should be of size `a.s` x `a.s`
+ * P and Q are array of respectively `a.r` and `a.s` latin squares
+ * P[j] should be of size `a.s` x `a.s`
+ * Q[i] should be of size `a.r` x `a.r`
  * P and Q are allowed to be NULL, in that case, the standart latin squares will be used everywhere
  * `a.r` must be equal to `b.s` and `a.s` must be equal to `b.r`
  */
@@ -534,27 +536,40 @@ void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square
   latin_square P_standart, Q_standart = {0};
   if (P == NULL)
   {
-    latin_square_init(&P_standart, a.r);
+    latin_square_init(&P_standart, a.s);
     standart_latin_square(P_standart);
   }
   if (Q == NULL)
   {
-    latin_square_init(&Q_standart, a.s);
+    latin_square_init(&Q_standart, a.r);
     standart_latin_square(Q_standart);
   }
-
   /*
-   * matrix of block of size:a
-   * WIDTH: `a.r` blocks and LENGTH: `a.s` blocks
+   * Contrary to the ressource used for this method : https://wismuth.com/magic/squares-of-nth-powers.html#16x16
+   * The indices are a bit reversed:
+   * block size: r x s
+   *                         r blocks
+   *                s cols s cols   ...   s cols
+   *               |------|------|- ... -|------|
+   *           r   | M_11 | M_12 |       | M_1r |
+   *          rows |      |      |       |      |
+   *               |------|------|- ... -|------|
+   *   s       .   .      .      .       .      .
+   * blocks    .   .      .      .       .      .
+   *           .   .      .      .       .      .
+   *               |------|------|- ... -|------|
+   *           r   | M_s1 | M_s2 |       | M_sr |
+   *          rows |      |      |       |      |
+   *               |------|------|- ... -|------|
+   *
+   * Hence the formula becomes for (i, j, u, v) \in \N_s x \N_r x \N_r x \N_s
+   *  -> [M_ij]_uv = ( a_{j, P[j]_{i, v}} * b_{i, Q[i]_{j, u}} )
    */
-  for (uint64_t i = 0; i < a.r; ++i)
-    for (uint64_t j = 0; j < a.s; ++j)
-      /*
-       * iterate through blocks of size:
-       * WIDTH: `a.s` and LENGTH: `a.r`
-       */
-      for (uint64_t u = 0; u < a.s; ++u)
-        for (uint64_t v = 0; v < a.r; ++v)
+
+  for (uint64_t i = 0; i < a.s; ++i)
+    for (uint64_t j = 0; j < a.r; ++j)
+      for (uint64_t u = 0; u < a.r; ++u)
+        for (uint64_t v = 0; v < a.s; ++v)
         {
           latin_square P_j = GET_AS_VEC_IF_NONNULL(P, j);
           latin_square Q_i = GET_AS_VEC_IF_NONNULL(Q, i);
@@ -564,7 +579,7 @@ void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square
           uint64_t b_idx = TAXI_GET_AS_MAT(b, i, Q_iju);
           // if (i == 0 && j == 0 && u == 0 && v == 0)
           // printf("M[%llu, %llu] = %llu, %llu", i * a.s + u, j * a.r + v, a_idx, b_idx);
-          M_SQR_GET_AS_MAT(M, i * a.s + u, j * a.r + v) = a_idx * b_idx;
+          M_SQR_GET_AS_MAT(M, i * a.r + u, j * a.s + v) = a_idx * b_idx;
         }
 
   return;
@@ -758,18 +773,6 @@ void generate_siamese(pow_m_sqr M)
   return;
 }
 
-uint8_t set_has_magic_sum(uint8_t *selected, pow_m_sqr M)
-{
-  uint64_t mu = pow_m_sqr_sum_row(M, 0);
-  uint64_t acc = 0;
-  for (uint32_t i = 0; i < M.n; ++i)
-    for (uint32_t j = 0; j < M.n; ++j)
-      if (GET_AS_MAT(selected, i, j, M.n))
-        acc += ui_pow_ui(M_SQR_GET_AS_MAT(M, i, j), M.d);
-
-  return mu == acc;
-}
-
 typedef struct
 {
   uint32_t i, j;
@@ -804,7 +807,26 @@ uint8_t search_pow_m_sqr_from_taxicab_iterate_over_sets_callback(uint8_t *select
     da_append((pack->rels), set);
   }
   // printf("%u\n", pack->rels->count);
-  return 1; // pack->rels->count < 1;
+  return pack->rels->count < 1;
+}
+
+// all solution already have magic sum
+uint8_t search_pow_m_sqr_from_taxicab_find_sets_collision_callback(uint8_t *selected, uint32_t n, void *data)
+{
+  pow_m_sqr_and_da_sets_packed *pack = (pow_m_sqr_and_da_sets_packed *)data;
+
+  // find_sets_print_selection(selected, n, NULL);
+
+  position *set = calloc(n, sizeof(position));
+  uint32_t idx = 0;
+  for (uint32_t i = 0; i < n; ++i)
+    for (uint32_t j = 0; j < n; ++j)
+      if (GET_AS_MAT(selected, i, j, n))
+        set[idx++] = (position){.i = i, .j = j};
+  da_append((pack->rels), set);
+
+  // printf("%u\n", pack->rels->count);
+  return pack->rels->count < 100;
 }
 
 void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
@@ -820,14 +842,91 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
 
   da_sets rels = {.n = M.n};
   pow_m_sqr_and_da_sets_packed pack = {.M = &M, .rels = &rels};
-  iterate_over_sets_callback(a.r, a.s, search_pow_m_sqr_from_taxicab_iterate_over_sets_callback, (void *)&pack);
+  // iterate_over_sets_callback(a.r, a.s, search_pow_m_sqr_from_taxicab_iterate_over_sets_callback, (void *)&pack);
+  find_sets_collision_method(M, a.r, a.s, search_pow_m_sqr_from_taxicab_find_sets_collision_callback, &pack);
 
-  da_foreach(position *, rel, &rels)
+  // da_foreach(position *, rel, &rels)
+  printf("%llu\n", rels.count);
+  return;
+
+  // arrays holding the latin squares
+  latin_square *P = calloc(a.s, sizeof(latin_square));
+  latin_square *Q = calloc(a.r, sizeof(latin_square));
+  if (P == NULL || Q == NULL)
   {
-    for (uint32_t k = 0; k < rels.n; ++k)
-      printf("(%u, %u) ", (*rel)[k].i, (*rel)[k].j);
-    putchar('\n');
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
   }
 
+  for (uint32_t i = 0; i < a.s; ++i)
+    latin_square_init(&(P[i]), a.r);
+  for (uint32_t i = 0; i < a.r; ++i)
+    latin_square_init(&(Q[i]), a.s);
+
   return;
+}
+
+/*
+ * P must be of length s and Q of length r
+ * P must hold square of size r and Q must hold squares of size s
+ */
+position position_after_latin_square_permutation(position standart_latin_square_pos, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
+{
+  uint32_t row = standart_latin_square_pos.i;
+  uint32_t col = standart_latin_square_pos.j;
+  uint32_t i = row / r;
+  uint32_t j = col / s;
+  uint32_t u = row % r;
+  uint32_t v = col % r;
+
+  /*
+   * a and b denote here (like in the rest of the codebase) (r, s, d)- and (s, r, d)-taxicabs respectively
+   * M_{row, col} = [M_{i, j}]_{u, v} = ( a_{j, [P_standart]_{i, v} * b_{i, [Q_standart]_{j, u}} )^d
+   *     in real cases (when P != P_standart)                ^---- j                       ^----- i
+   * We want to know where the unique coefficient with that value ended up
+   * ie we want to find the unique quatuor (i', j', u', v') such that:
+   *  -> a_{j', P[j']_{i', v'}} = a_{j, [P_standart]_{i, v}}
+   *  -> b_{i', Q[i']_{j', u'}} = b_{i, [Q_standart]_{j, u}}
+   * and since a and b are taxicabs with distinct entries we obtain:
+   *  -> j' = j
+   *  -> P[j']_{i', v'} = [P_standart]_{i, v}
+   *  -> i' = i
+   *  -> Q[i']_{j', u'} = [Q_standart]_{j, u}
+   * simplifying gives:
+   *  -> (i', j') = (i, j)
+   *  -> P[j]_{i, v'} = [P_standart]_{i, v}
+   *  -> Q[i]_{j, u'} = [Q_standart]_{j, u}
+   * We hence need to compare the i-th line from P[j] with the i-th line from the standart P latin square
+   * and do the same with the j-th line of Q[i] and the j-th line from the standart Q latin square
+   * In fact [P_standart]_{i, bj} = (i + v) % r        (remember we have P_standart.n = r)
+   * So we just need to find the v' for which this value is hit in P[j]_{i, v'}
+   */
+
+  uint32_t v_prime;
+  for (v_prime = 0; v_prime < r; ++v_prime)
+  {
+    if (M_SQR_GET_AS_MAT(P[j], i, v_prime) == ((i + v) % r))
+      break;
+    if (v_prime == r - 1)
+    // last iteration and we did not hit it: absurd there must be a cell with value (i + v) % r in P[j], by construction of a latin square
+    {
+      fprintf(stderr, "[UNREACHABLE] latin square with no %u in row %u", (i + v) % r, i);
+      exit(1);
+    }
+  }
+
+  uint32_t u_prime;
+  for (u_prime = 0; u_prime < s; ++u_prime)
+  {
+    if (M_SQR_GET_AS_MAT(Q[i], j, u_prime) == ((j + u) % s))
+      break;
+    if (u_prime == s - 1)
+    // last iteration and we did not hit it: absurd there must be a cell with value (j + u) % s in Q[i], by construction of a latin square
+    {
+      fprintf(stderr, "[UNREACHABLE] latin square with no %u in row %u", (j + u) % s, j);
+      exit(1);
+    }
+  }
+
+  return (position){.i = i * r + u_prime, .j = j * s + v_prime};
 }

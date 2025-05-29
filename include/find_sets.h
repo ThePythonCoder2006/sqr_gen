@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "pow_m_sqr.h"
+
 #define GET_AS_MAT(arr, i, j, width) ((arr)[(i) * (width) + (j)])
 
 /*
@@ -24,5 +26,7 @@ typedef struct sets_search_data_s
 
 void iterate_over_sets_callback(uint32_t r, uint32_t s, set_callback f, void *data);
 uint8_t find_sets_print_selection(uint8_t *selected, uint32_t n, void *_);
+uint8_t set_has_magic_sum(const uint8_t *selected, const pow_m_sqr M);
+void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data);
 
 #endif // __FIND_SETS__

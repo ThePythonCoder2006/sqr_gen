@@ -319,7 +319,6 @@ uint64_t find_terms(Rep *result_reps, int *terms, int r, int s)
 
 void find_taxicab(taxicab T)
 {
-  srand(time(NULL));
   if (!squares_inited)
   {
     init_squares();
