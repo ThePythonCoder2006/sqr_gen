@@ -11,10 +11,14 @@
 #include "perf_counter.h"
 #include "taxicab.h"
 #include "latin_squares.h"
+
 #include "find_sets.h"
+#include "find_latin_squares.h"
 
 #include "gmp.h"
 #include "curses.h"
+
+#define REQUIERED_SETS 5
 
 /*
  * sums the entries of the j-th column of M into ret
@@ -228,109 +232,6 @@ int pow_m_sqr_init(pow_m_sqr *M, uint64_t n, uint64_t d)
   return 0;
 }
 
-void mvpow_m_sqr_print(int y0, int x0, pow_m_sqr M)
-{
-  size_t *max = calloc(M.n, sizeof(size_t));
-  if (max == NULL)
-  {
-    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
-    exit(1);
-  }
-  char buff[32] = {0};
-
-  for (uint64_t j = 0; j < M.n; ++j)
-    for (uint64_t i = 0; i < M.n; ++i)
-    {
-      size_t l = snprintf(buff, 31, "%llu", M_SQR_GET_AS_MAT(M, i, j));
-      if (l > max[j])
-        max[j] = l;
-    }
-
-  size_t dwidth = snprintf(buff, 31, "%u", M.d);
-
-  size_t width = 1; // start '|'
-
-  for (uint64_t j = 0; j < M.n; ++j)
-  {
-    width += max[j] + dwidth + 1; // +1 for '|'
-    // mvprintw(j, 30, "%llu", max[j]);
-  }
-
-  // for (uint64_t _ = 0; _ < width; ++_)
-  //   putchar('-');
-  // putchar('\n');
-
-  int x = x0, y = y0;
-  mvaddch(y, x, ACS_ULCORNER);
-  mvvline(y + 1, x, 0, 3 * M.n);
-  mvhline(y, x + 1, 0, width - 1);
-
-  for (uint64_t i = 0; i < M.n; ++i)
-  {
-    x = x0 + 1;
-    y += 1;
-    for (uint64_t j = 0; j < M.n; ++j)
-    {
-      x += max[j];
-      x += mvprintw(y, x, "%u", M.d);
-      if (i == 0)
-      {
-        if (j == M.n - 1)
-          mvaddch(y - 1, x, ACS_URCORNER);
-        else
-          mvaddch(y - 1, x, ACS_TTEE);
-      }
-      else
-      {
-        if (j == M.n - 1)
-          mvaddch(y - 1, x, ACS_RTEE);
-        else
-          mvaddch(y - 1, x, ACS_PLUS);
-      }
-
-      mvaddch(y, x, ACS_VLINE);
-      mvaddch(y + 1, x, ACS_VLINE);
-
-      if (j == 0)
-      {
-        mvhline(y + 2, x0 + 1, 0, width - 2);
-        if (i == M.n - 1)
-          mvaddch(y + 2, x0, ACS_LLCORNER);
-        else
-          mvaddch(y + 2, x0, ACS_LTEE);
-      }
-
-      if (i == M.n - 1)
-      {
-        if (j == M.n - 1)
-          mvaddch(y + 2, x, ACS_LRCORNER);
-        else
-          mvaddch(y + 2, x, ACS_BTEE);
-      }
-
-      ++x;
-    }
-
-    x = x0 + 1;
-    y += 1;
-
-    for (uint64_t j = 0; j < M.n; ++j)
-    {
-      x += mvprintw(y, x, "%*llu", (int)max[j], M_SQR_GET_AS_MAT(M, i, j));
-      x += dwidth + 1; // +1 for vertical seperator
-    }
-
-    y += 1;
-    x = x0;
-  }
-
-  move(y + 1, x0);
-
-  free(max);
-
-  return;
-}
-
 void pow_m_sqr_clear(pow_m_sqr *M)
 {
   free(M->arr);
@@ -450,16 +351,23 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
 
   if ((mpz_get_ui(perf->boards_tested) & 0xffffff) == 0 && mpz_cmp_ui(perf->boards_tested, 0) != 0)
   {
+#ifndef __DEBUG__
     move(0, 0);
     clear();
 
     printw("average speed = ");
     print_perfw(*perf, "grids");
-    mvpow_m_sqr_print(1, 0, base);
+    mvpow_m_sqr_printw(1, 0, base);
     char buff[256] = {0};
     gmp_snprintf(buff, 255, "%Zu boards have been rejected so far", perf->boards_tested);
     printw("%s.\n Current time: %lfs", buff, timer_stop(&(perf->time)));
     refresh();
+#else
+    printf("average speed = ");
+    printf_perf(*perf, "grids");
+    pow_m_sqr_printf(base);
+    gmp_printf("%Zu boards have been rejected so far.\n Current time: %lfs\n", perf->boards_tested, timer_stop(&perf->time));
+#endif
   }
 
   if ((progress + 1) % base.n == 0 && progress >= base.n)
@@ -635,6 +543,22 @@ void permute_cols(pow_m_sqr M, uint64_t *permut)
   return;
 }
 
+void transpose_cols(pow_m_sqr M, uint64_t i, uint64_t j)
+{
+  uint32_t t = M.cols[i];
+  M.cols[i] = M.cols[j];
+  M.cols[j] = t;
+  return;
+}
+
+void transpose_rows(pow_m_sqr M, uint64_t i, uint64_t j)
+{
+  uint32_t t = M.rows[i];
+  M.rows[i] = M.rows[j];
+  M.rows[j] = t;
+  return;
+}
+
 /*
  * permut should be an array of size `M.n` where `permut[i]` contains the final indice of line `i`
  */
@@ -764,7 +688,7 @@ void generate_siamese(pow_m_sqr M)
       j = (j + 1) % M.n;
     }
     // clear();
-    // mvpow_m_sqr_print(0, 0, M);
+    // mvpow_m_sqr_printw(0, 0, M);
     // printw("%i, %i\n", i, j);
     // refresh();
     // getch();
@@ -772,11 +696,6 @@ void generate_siamese(pow_m_sqr M)
 
   return;
 }
-
-typedef struct
-{
-  uint32_t i, j;
-} position;
 
 typedef struct da_sets_s
 {
@@ -826,7 +745,80 @@ uint8_t search_pow_m_sqr_from_taxicab_find_sets_collision_callback(uint8_t *sele
   da_append((pack->rels), set);
 
   // printf("%u\n", pack->rels->count);
-  return pack->rels->count < 100;
+  return pack->rels->count < REQUIERED_SETS;
+}
+
+typedef struct
+{
+  /*
+   * P = array of size r of latin_squares of side s
+   * Q = array of size s of latin_squares of side r
+   */
+  latin_square *P, *Q;
+  uint32_t r, s;
+  da_sets rels, mark;
+} iterate_over_latin_squares_array_pack;
+
+uint8_t fall_on_different_line_after_latin_squares(position *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s);
+void print_iterate_over_latin_squares_array_pack(iterate_over_latin_squares_array_pack *pack);
+void printf_rel(position *rel, const size_t n);
+uint8_t rels_are_disjoint(position *rel1, position *rel2, const size_t n);
+uint8_t rels_are_compatible(position *rel1, position *rel2, const size_t n);
+
+uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data);
+uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data);
+uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark);
+
+// start the search on Q
+uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data)
+{
+  (void)_1, (void)_2;
+  iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
+  return iterate_over_all_square_array_callback(pack->Q, pack->s, compat_callback2, data);
+}
+
+uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data)
+{
+  (void)_1, (void)_2;
+  iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
+  return !check_for_compatibility_in_latin_squares(pack->P, pack->Q, pack->r, pack->s, pack->rels, pack->mark);
+}
+
+/*
+ * returns non-zero iff two compatible sets exist within the latin_square provided
+ */
+uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark)
+{
+  const uint64_t n = r * s;
+
+  da_foreach(position *, rel, &rels)
+  {
+    if (!fall_on_different_line_after_latin_squares(*rel, P, Q, r, s))
+      continue;
+
+    da_foreach(position *, prev_rel, &mark)
+    {
+      if (rels_are_compatible(*rel, *prev_rel, n))
+      {
+        // we found two non-colliding correct sets: success !!
+        printf("YAAAAAAAAAAAAAAAAAAAAAAY!!!!!!!!!!!!!\n");
+        printf_rel(*rel, n);
+        putchar('\n');
+        printf_rel(*prev_rel, n);
+        putchar('\n');
+        return 1; // quit the search
+      }
+    }
+    da_append(&mark, *rel);
+  }
+
+  return 0;
+}
+
+uint8_t find_set_compatible_latin_squares_array(latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark)
+{
+  iterate_over_latin_squares_array_pack pack = {.P = P, .Q = Q, .r = r, .s = s, .rels = rels, .mark = mark};
+  return iterate_over_all_square_array_callback(P, r, compat_callback1, &pack);
 }
 
 void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
@@ -840,49 +832,72 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
   // fill M with a semi magic square from standart latin squares
   pow_semi_m_sqr_from_taxicab(M, a, b, NULL, NULL);
 
+  /*
+   * TODO: we are currently leaking rels
+   */
   da_sets rels = {.n = M.n};
   pow_m_sqr_and_da_sets_packed pack = {.M = &M, .rels = &rels};
-  // iterate_over_sets_callback(a.r, a.s, search_pow_m_sqr_from_taxicab_iterate_over_sets_callback, (void *)&pack);
   find_sets_collision_method(M, a.r, a.s, search_pow_m_sqr_from_taxicab_find_sets_collision_callback, &pack);
 
+  // FILE *f = fopen("output.txt", "w");
   // da_foreach(position *, rel, &rels)
+  // {
+  //   for (uint32_t idx = 0; idx < rels.n; ++idx)
+  //     fprintf(f, "(%u, %u), ", ((*rel)[idx]).i, ((*rel)[idx]).j);
+  //   fprintf(f, "\n");
+  // }
+  // fclose(f);
+
+#ifndef __DEBUG__
+  clear();
+  printw("%llu\n", rels.count);
+  // for (uint32_t k = 0; k < M.n; ++k)
+  //   printf("(%u, %u), ", rels.items[0][k].i, rels.items[0][k].j);
+  // putchar('\n');
+  // mvpow_m_sqr_printw_highlighted(1, 0, M, rels.items[0]);
+  refresh();
+  getch();
+#else
   printf("%llu\n", rels.count);
-  return;
+#endif
 
   // arrays holding the latin squares
-  latin_square *P = calloc(a.s, sizeof(latin_square));
-  latin_square *Q = calloc(a.r, sizeof(latin_square));
+  latin_square *P = calloc(a.r, sizeof(latin_square));
+  latin_square *Q = calloc(a.s, sizeof(latin_square));
   if (P == NULL || Q == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
     exit(1);
   }
 
-  for (uint32_t i = 0; i < a.s; ++i)
-    latin_square_init(&(P[i]), a.r);
   for (uint32_t i = 0; i < a.r; ++i)
-    latin_square_init(&(Q[i]), a.s);
+    latin_square_init(&(P[i]), a.s);
+  for (uint32_t i = 0; i < a.s; ++i)
+    latin_square_init(&(Q[i]), a.r);
+
+  da_sets mark = {.n = M.n};
+  printf("was%s able to find compatible latin square from the found sets\n", !find_set_compatible_latin_squares_array(P, Q, a.r, a.s, rels, mark) ? "" : " not");
 
   return;
 }
 
 /*
- * P must be of length s and Q of length r
- * P must hold square of size r and Q must hold squares of size s
+ * P must be of length r and Q of length s
+ * P must hold square of size s and Q must hold squares of size r
  */
 position position_after_latin_square_permutation(position standart_latin_square_pos, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
 {
   uint32_t row = standart_latin_square_pos.i;
   uint32_t col = standart_latin_square_pos.j;
-  uint32_t i = row / r;
-  uint32_t j = col / s;
-  uint32_t u = row % r;
-  uint32_t v = col % r;
+  uint32_t i = row / r; // 0 <= i < s
+  uint32_t j = col / s; // 0 <= j < r
+  uint32_t u = row % r; // 0 <= u < r
+  uint32_t v = col % s; // 0 <= v < s
 
   /*
    * a and b denote here (like in the rest of the codebase) (r, s, d)- and (s, r, d)-taxicabs respectively
    * M_{row, col} = [M_{i, j}]_{u, v} = ( a_{j, [P_standart]_{i, v} * b_{i, [Q_standart]_{j, u}} )^d
-   *     in real cases (when P != P_standart)                ^---- j                       ^----- i
+   *     in real cases (when P != P_standart)            ^---- j                     ^----- i
    * We want to know where the unique coefficient with that value ended up
    * ie we want to find the unique quatuor (i', j', u', v') such that:
    *  -> a_{j', P[j']_{i', v'}} = a_{j, [P_standart]_{i, v}}
@@ -898,35 +913,320 @@ position position_after_latin_square_permutation(position standart_latin_square_
    *  -> Q[i]_{j, u'} = [Q_standart]_{j, u}
    * We hence need to compare the i-th line from P[j] with the i-th line from the standart P latin square
    * and do the same with the j-th line of Q[i] and the j-th line from the standart Q latin square
-   * In fact [P_standart]_{i, bj} = (i + v) % r        (remember we have P_standart.n = r)
+   * In fact [P_standart]_{i, v} = (i + v) % s        (remember we have P_standart.n = s)
    * So we just need to find the v' for which this value is hit in P[j]_{i, v'}
    */
 
+  const uint32_t P_standart_iv = ((i + v) % s);
+
   uint32_t v_prime;
-  for (v_prime = 0; v_prime < r; ++v_prime)
+  for (v_prime = 0; v_prime < s; ++v_prime)
   {
-    if (M_SQR_GET_AS_MAT(P[j], i, v_prime) == ((i + v) % r))
+    if (M_SQR_GET_AS_MAT(P[j], i, v_prime) == P_standart_iv)
       break;
-    if (v_prime == r - 1)
+    if (v_prime == s - 1)
     // last iteration and we did not hit it: absurd there must be a cell with value (i + v) % r in P[j], by construction of a latin square
     {
-      fprintf(stderr, "[UNREACHABLE] latin square with no %u in row %u", (i + v) % r, i);
+      fprintf(stderr, "[UNREACHABLE] P: %ux%u latin square with no %u in row %u\n", P[j].n, P[j].n, P_standart_iv, i);
       exit(1);
     }
   }
 
+  const uint32_t Q_standart_ju = ((j + u) % r);
+
   uint32_t u_prime;
-  for (u_prime = 0; u_prime < s; ++u_prime)
+  for (u_prime = 0; u_prime < r; ++u_prime)
   {
-    if (M_SQR_GET_AS_MAT(Q[i], j, u_prime) == ((j + u) % s))
+    if (M_SQR_GET_AS_MAT(Q[i], j, u_prime) == Q_standart_ju)
       break;
-    if (u_prime == s - 1)
+    if (u_prime == r - 1)
     // last iteration and we did not hit it: absurd there must be a cell with value (j + u) % s in Q[i], by construction of a latin square
     {
-      fprintf(stderr, "[UNREACHABLE] latin square with no %u in row %u", (j + u) % s, j);
+      fprintf(stderr, "[UNREACHABLE] Q: %ux%u latin square with no %u in row %u\n", Q[i].n, Q[i].n, Q_standart_ju, j);
+#ifndef __DEBUG__
+      clear();
+      mvpow_m_sqr_printw(0, 0, Q[i]);
+      getch();
+#else
+      pow_m_sqr_printf(Q[i]);
+      putchar('\n');
+#endif
       exit(1);
     }
   }
 
   return (position){.i = i * r + u_prime, .j = j * s + v_prime};
+}
+
+uint8_t fall_on_different_line_after_latin_squares(position *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
+{
+  const uint64_t n = r * s;
+  uint8_t *rows = calloc(n, sizeof(uint8_t));
+  uint8_t *cols = calloc(n, sizeof(uint8_t));
+  for (uint64_t i = 0; i < n; ++i)
+  {
+    // printf("[2] %u, %u\n", poses[i].i, poses[i].j);
+    position new_pos = position_after_latin_square_permutation(poses[i], P, Q, r, s);
+    if (rows[new_pos.i] || cols[new_pos.j])
+      return 0;
+    rows[new_pos.i] = 1;
+    cols[new_pos.j] = 1;
+  }
+
+  free(rows);
+  free(cols);
+  return 1;
+}
+
+void print_iterate_over_latin_squares_array_pack(iterate_over_latin_squares_array_pack *pack)
+{
+#ifndef __DEBUG__
+  clear();
+  for (uint32_t i = 0; i < pack->s; ++i)
+    mvpow_m_sqr_printw(0, i * 5 * pack->r, pack->P[i]);
+
+  for (uint32_t i = 0; i < pack->r; ++i)
+    mvpow_m_sqr_printw(5 * pack->r + 2, i * 5 * pack->s, pack->Q[i]);
+#else
+  (void)pack;
+#endif
+
+  return;
+}
+
+void printf_rel(position *rel, const size_t n)
+{
+  for (size_t k = 0; k < n; ++k)
+    printf("(%u, %u), ", rel[k].i, rel[k].j);
+
+  return;
+}
+
+uint8_t rels_are_disjoint(position *rel1, position *rel2, const size_t n)
+{
+  for (size_t k = 0; k < n; ++k)
+    if (rel1[k].i == rel2[k].i || rel1[k].j == rel2[k].j)
+      return 0;
+
+  return 1;
+}
+
+uint8_t rels_are_compatible(position *rel1, position *rel2, const size_t n)
+{
+  if (!rels_are_disjoint(rel1, rel2, n))
+    return 0;
+
+  /*
+   * The compatibility condition is as follow:
+   * initiate two counter, i = 0 and j = 0
+   * for each column:
+   *  - add one to i if the element of rel2 in this column is above the element of rel1 in the column
+   *    if the elements from rel1 and rel2 collide: n is odd and this is the middle: ignore
+   * for each row:
+   *  - add one to the j if the element of rel2 in this row is to the left of the element of rel1 in the row
+   *    if the elements from rel1 and rel2 collide: n is odd and this is the middle: ignore
+   * FOR N EVEN:
+   * rel1 and rel2 are compatible iff i = j = n/2 if n is even
+   * FOR N ODD:
+   * rel1 and rel2 are compatible iff i = j = (n - 1)/2 if n is odd
+   */
+
+  uint64_t top_count = 0;
+  uint64_t left_count = 0;
+
+  (void)top_count, (void)left_count;
+
+  fprintf(stderr, "[TODO] Not (yet) implemented");
+
+  return 1;
+}
+
+void permute_into_pow_m_sqr(pow_m_sqr M, position *diag1, position *diag2)
+{
+  const uint64_t n = M.n;
+  // transpose the main diagonal into place:
+  for (uint64_t j = 0; j < n; ++j)
+  {
+    uint32_t col = diag1[j].j;
+    transpose_cols(M, col, j);
+
+    // position of the j-th column in the array diag1
+    uint64_t idx1 = 0;
+    for (; idx1 < n; ++idx1)
+      if (diag1[idx1].j == j)
+        break;
+
+    // fix diag1
+    uint64_t k = 0;
+    for (; k < n; ++k)
+      if (diag1[k].j == col)
+        break;
+    diag1[idx1].j = diag1[k].j;
+    diag1[k].j = j;
+
+    // position of the j-th column in the array diag2
+    uint64_t idx2 = 0;
+    for (; idx2 < n; ++idx2)
+      if (diag2[idx2].j == j)
+        break;
+
+    // fix diag2
+    k = 0;
+    for (; k < n; ++k)
+      if (diag2[k].j == col)
+        break;
+    uint32_t t = diag2[idx2].j;
+    diag2[idx2].j = diag2[k].j;
+    diag2[k].j = t;
+
+    // printf("%hhd\n", parity_of_sets(diag1, diag2, M.n));
+
+#ifndef __DEBUG__
+    // clear();
+    // mvpow_m_sqr_printw_highlighted(0, 0, M, diag1, diag2, COLOR_YELLOW, COLOR_CYAN);
+    // printw("%hhd\n", parity_of_sets(diag1, diag2, M.n));
+    // refresh();
+    // getch();
+#else
+    // pow_m_sqr_printf(M);
+    // putchar('\n');
+#endif
+  }
+
+  // printf("----------------------\n");
+
+#ifndef __DEBUG__
+  // clear();
+  // mvpow_m_sqr_printw_highlighted(0, 0, M, diag1, diag2, COLOR_YELLOW, COLOR_CYAN);
+  // refresh();
+  // getch();
+#else
+  // pow_m_sqr_printf(M);
+  // putchar('\n');
+#endif
+
+  // transpose the anti-diagonal into place:
+  for (uint64_t j = 0; j < n; ++j)
+  {
+    uint32_t col = diag2[j].j;
+    transpose_cols(M, col, j);
+
+    // position of the j-th column in the array diag1
+    uint64_t idx1 = 0;
+    for (; idx1 < n; ++idx1)
+      if (diag1[idx1].j == j)
+        break;
+
+    // fix diag1
+    uint64_t k = 0;
+    for (; k < n; ++k)
+      if (diag1[k].j == col)
+        break;
+    diag1[idx1].j = diag1[k].j;
+    diag1[k].j = j;
+
+    // position of the j-th column in the array diag2
+    uint64_t idx2 = 0;
+    for (; idx2 < n; ++idx2)
+      if (diag2[idx2].j == j)
+        break;
+
+    // fix diag2
+    k = 0;
+    for (; k < n; ++k)
+      if (diag2[k].j == col)
+        break;
+    uint32_t t = diag2[idx2].j;
+    diag2[idx2].j = diag2[k].j;
+    diag2[k].j = t;
+
+    // printf("%hhd, ", parity_of_sets(diag1, diag2, M.n));
+
+#ifndef __DEBUG__
+    // clear();
+    // mvpow_m_sqr_printw_highlighted(0, 0, M, diag1, diag2, COLOR_YELLOW, COLOR_CYAN);
+    // printw("%hhd\n", parity_of_sets(diag1, diag2, M.n));
+    // refresh();
+    // getch();
+#else
+    // pow_m_sqr_printf(M);
+    // putchar('\n');
+#endif
+
+    transpose_rows(M, col, j);
+
+    // position of the j-th row in the array diag1
+    idx1 = 0;
+    for (; idx1 < n; ++idx1)
+      if (diag1[idx1].i == j)
+        break;
+
+    // fix diag1
+    k = 0;
+    for (; k < n; ++k)
+      if (diag1[k].i == col)
+        break;
+    diag1[idx1].i = diag1[k].i;
+    diag1[k].i = j;
+
+    // position of the j-th column in the array diag2
+    idx2 = 0;
+    for (; idx2 < n; ++idx2)
+      if (diag2[idx2].i == j)
+        break;
+
+    // fix diag2
+    k = 0;
+    for (; k < n; ++k)
+      if (diag2[k].i == col)
+        break;
+    t = diag2[idx2].i;
+    diag2[idx2].i = diag2[k].i;
+    diag2[k].i = t;
+
+    // printf("%hhd\n", parity_of_sets(diag1, diag2, M.n));
+
+#ifndef __DEBUG__
+    // clear();
+    // mvpow_m_sqr_printw_highlighted(0, 0, M, diag1, diag2, COLOR_YELLOW, COLOR_CYAN);
+    // printw("%hhd\n", parity_of_sets(diag1, diag2, M.n));
+    // refresh();
+    // getch();
+#else
+    // pow_m_sqr_printf(M);
+    // putchar('\n');
+#endif
+  }
+
+  return;
+}
+
+/*
+ * returns the parity of the permutation changing the two sets, rel1 and rel2, into the two main diags
+ */
+int8_t parity_of_sets(position *rel1, position *rel2, const uint64_t n)
+{
+  int8_t ret = 1;
+
+  for (uint64_t idx = 0; idx < n; ++idx)
+  {
+    if (rel1[idx].i != rel1[idx].j || rel1[idx].i != (n - 1) - rel1[idx].j)
+    {
+      // will need to be transposed
+      ret *= -1;
+      // printf("(%u %u)", rel1[idx].i, rel1[idx].j);
+    }
+
+    // indices go from 0 to (n - 1)
+    if (rel2[idx].i != rel2[idx].j || rel2[idx].i != (n - 1) - rel2[idx].j)
+    {
+      // will need to be transposed
+      ret *= -1;
+      // printf("(%u %u)", rel2[idx].i, (uint32_t)(n - 1) - rel2[idx].j);
+    }
+  }
+
+  // putchar('\n');
+
+  return ret;
 }

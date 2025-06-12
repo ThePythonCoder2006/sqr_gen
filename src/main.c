@@ -13,6 +13,7 @@
 #include "taxicab.h"
 #include "find_taxicab.h"
 #include "find_sets.h"
+#include "find_latin_squares.h"
 
 #define __PERF_COUNTER_IMPLEMENTATION__
 #include "perf_counter.h"
@@ -20,7 +21,7 @@
 #include "GMP.h"
 #include "curses.h"
 
-void random_perm(uint64_t *l, size_t n);
+uint8_t print_latin_square_array(latin_square *P, uint64_t len, void *_);
 
 int main2(int argc, char **argv)
 {
@@ -49,26 +50,31 @@ int main2(int argc, char **argv)
   M_SQR_GET_AS_MAT(test4_2, 3, 2) = 32;
   M_SQR_GET_AS_MAT(test4_2, 3, 3) = 37;
 
+#ifndef __DEBUG__
   initscr();
-  mvpow_m_sqr_print(0, 0, test4_2);
+  mvpow_m_sqr_printw(0, 0, test4_2);
   refresh();
+#endif
 
   // printw("%s\n", is_pow_m_sqr(test4_2) ? "is a magic square of squares" : "is not a magic square of squares");
 
   perf_counter perf = {.boards_tested = 0};
   timer_start(&(perf.time));
   search_pow_m_sqr(test4_2, 79, 5, NULL, &perf);
+
+#ifndef __DEBUG__
   clear();
   printw("global average speed was: ");
   print_perfw(perf, "grids");
   printw(". Time taken: %lf s", timer_stop(&(perf.time)));
 
-  mvpow_m_sqr_print(1, 0, test4_2);
+  mvpow_m_sqr_printw(1, 0, test4_2);
   printw("%s\n", is_pow_m_sqr(test4_2) ? "is a magic square of squares" : "is not a magic square of squares");
   refresh();
 
   getch();
   endwin();
+#endif
 
   pow_m_sqr_clear(&test4_2);
 
@@ -78,12 +84,11 @@ int main2(int argc, char **argv)
 int main(int argc, char **argv)
 {
   (void)argc, (void)argv;
-  srand(69);
+  srand(70);
 
   taxicab a = {0};
   taxicab_init(&a, 2, 3, 2);
   find_taxicab(a);
-  // printf("%u\n", __LINE__);
 
   // TAXI_GET_AS_MAT(a, 0, 0) = 2;
   // TAXI_GET_AS_MAT(a, 0, 1) = 21;
@@ -174,6 +179,7 @@ int main(int argc, char **argv)
 
 #ifndef __DEBUG__
   initscr();
+  start_color();
   // printf("%u\n", __LINE__);
   clear();
   mvtaxicab_print(0, 0, a);
@@ -185,11 +191,15 @@ int main(int argc, char **argv)
   printw("is%s a (%llu, %llu, %llu)-taxicab\n", is_taxicab(b) ? "" : " not", b.r, b.s, b.d);
   // printf("%u\n", __LINE__);
   getch();
-  // printw("global average speed was: ");
-  // print_perfw(perf, "taxicabs");
-  // printw(". Time taken: %lf s", timer_stop(&(perf.time)));
-  // getch();
-
+// printw("global average speed was: ");
+// print_perfw(perf, "taxicabs");
+// printw(". Time taken: %lf s", timer_stop(&(perf.time)));
+// getch();
+#else
+  taxicab_printf(a);
+  printf("\nis%s a (%llu, %llu, %llu)-taxicab\n", is_taxicab(a) ? "" : " not", a.r, a.s, a.d);
+  taxicab_printf(b);
+  printf("\nis%s a (%llu, %llu, %llu)-taxicab\n", is_taxicab(b) ? "" : " not", b.r, b.s, b.d);
 #endif
 
   // mvtaxicab_print(1, 0, T_2_2_2);
@@ -198,35 +208,79 @@ int main(int argc, char **argv)
   // getch();
 
   pow_m_sqr sq = {0};
-  pow_m_sqr_init(&sq, 6, 2);
+  pow_m_sqr_init(&sq, a.r * a.s, a.d);
 
   pow_semi_m_sqr_from_taxicab(sq, a, b, NULL, NULL);
 
+  position rel1[6] = {{0, 0}, {1, 2}, {2, 5}, {3, 1}, {4, 3}, {5, 4}};
+  position rel2[6] = {{5, 2}, {4, 0}, {3, 5}, {2, 1}, {1, 4}, {0, 3}};
 #ifndef __DEBUG__
   clear();
-  mvpow_m_sqr_print(0, 0, sq);
+  mvpow_m_sqr_printw_highlighted(0, 0, sq, rel1, rel2, COLOR_YELLOW, COLOR_CYAN);
   printw("is%s a semi magic square of %u-th powers", is_pow_semi_m_sqr(sq) ? "" : " not", sq.d);
 
   getch();
 #else
-  printf("is%s a semi magic square of %u-th powers\n", is_pow_semi_m_sqr(sq) ? "" : " not", sq.d);
+  pow_m_sqr_printf(sq);
+  printf("\nis%s a semi magic square of %u-th powers\n", is_pow_semi_m_sqr(sq) ? "" : " not", sq.d);
 #endif
 
   // search_pow_m_sqr_from_pow_semi_m_sqr(sq_9_2);
   // #ifndef __DEBUG__
   //   clear();
-  //   mvpow_m_sqr_print(0, 0, sq);
+  //   mvpow_m_sqr_printw(0, 0, sq);
   //   printw("is%s a magic square of %u-th powers", is_pow_m_sqr(sq) ? "" : " not", sq.d);
   //   getch();
 
   //   endwin();
   // #endif
 
-  search_pow_m_sqr_from_taxicabs(sq, a, b);
+  // search_pow_m_sqr_from_taxicabs(sq, a, b);
+
+  // printf("%hhd\n\n", parity_of_sets(rel1, rel2, sq.n));
+  permute_into_pow_m_sqr(sq, rel1, rel2);
+
+  // const uint32_t len = 2;
+  // const uint32_t side_length = 3;
+  // latin_square *P = calloc(len, sizeof(latin_square));
+  // for (uint32_t i = 0; i < len; ++i)
+  //   latin_square_init(P + i, side_length);
+
+  // iterate_over_all_square_array_callback(P, len, print_latin_square_array, NULL);
+
+#ifndef __DEBUG__
+  endwin();
+#endif
 
   pow_m_sqr_clear(&sq);
 
   taxicab_clear(&a);
   taxicab_clear(&b);
   return 0;
+}
+
+uint8_t print_latin_square_array(latin_square *P, uint64_t len, void *_)
+{
+  (void)_;
+#ifndef __DEBUG__
+  clear();
+#endif
+  for (uint64_t i = 0; i < len; ++i)
+  {
+#ifndef __DEBUG__
+    mvpow_m_sqr_printw(0, 20 * i, P[i]);
+#else
+    pow_m_sqr_printf(P[i]);
+    putchar('\n');
+#endif
+  }
+
+#ifndef __DEBUG__
+  refresh();
+  getch();
+#else
+  printf("-------------------\n");
+#endif
+
+  return 1;
 }

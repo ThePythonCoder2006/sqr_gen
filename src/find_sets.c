@@ -131,7 +131,7 @@ uint8_t iterate_over_sets_callback_inside(sets_search_data *d, uint32_t current_
   return iterate_over_sets_callback_inside(d, current_row, current_col + 1, count, f, data);
 }
 
-#define HSHTBL_SIZE 1003 // big prime number
+#define HSHTBL_SIZE 10003 // big prime number
 
 typedef struct hshtbl_node_s
 {
@@ -140,7 +140,11 @@ typedef struct hshtbl_node_s
   struct hshtbl_node_s *next;
 } hshtbl_node;
 
-typedef hshtbl_node *hshtbl[HSHTBL_SIZE];
+typedef struct
+{
+  uint64_t count;
+  hshtbl_node *arr[HSHTBL_SIZE];
+} hshtbl;
 
 /*
  * returns an array of n - 1 hshtbls as there is no need for a hshtbl for sets 16 entries long
@@ -157,23 +161,32 @@ hshtbl *init_hshtbls(const uint32_t n)
   return table;
 }
 
-void free_hshtbls(hshtbl *table, const uint32_t n)
+void free_hshtbl(hshtbl table)
 {
-  for (uint32_t k = 0; k < n; ++k)
-    for (uint32_t i = 0; i < HSHTBL_SIZE; i++)
+  for (uint32_t i = 0; i < HSHTBL_SIZE; i++)
+  {
+    hshtbl_node *node = table.arr[i];
+    while (node)
     {
-      hshtbl_node *node = table[k][i];
-      while (node)
-      {
-        free(node->items);
-        hshtbl_node *tmp = node;
-        node = node->next;
-        free(tmp);
-      }
-      table[k][i] = NULL;
+      free(node->items);
+      hshtbl_node *tmp = node;
+      node = node->next;
+      free(tmp);
     }
 
+    table.arr[i] = NULL;
+  }
+  return;
+}
+
+void free_hshtbls(hshtbl *table, const uint32_t n)
+{
+  for (uint32_t k = 0; k < n - 1; ++k)
+    free_hshtbl(table[k]);
+
   free(table);
+
+  return;
 }
 
 static inline uint32_t hash_func(uint64_t x)
@@ -188,11 +201,11 @@ static inline uint32_t hash_func(uint64_t x)
 /*
  * modifies table
  */
-void hshtbl_insert(hshtbl table, const uint32_t *items, const uint32_t count, const uint64_t sum)
+void hshtbl_insert(hshtbl *table, const uint32_t *items, const uint32_t count, const uint64_t sum)
 {
   uint64_t h = hash_func(sum);
 
-  hshtbl_node *node = table[h];
+  hshtbl_node *node = table->arr[h];
   while (node)
   {
     if (memcmp(node->items, items, count * sizeof(uint32_t)) == 0)
@@ -215,8 +228,9 @@ void hshtbl_insert(hshtbl table, const uint32_t *items, const uint32_t count, co
   }
   memcpy(node->items, items, count * sizeof(uint32_t));
 
-  node->next = table[h];
-  table[h] = node;
+  node->next = table->arr[h];
+  table->arr[h] = node;
+  ++table->count;
   return;
 }
 
@@ -298,15 +312,50 @@ int8_t are_compatible_sets(const uint8_t *selected, const uint32_t *items, uint3
   return 1;
 }
 
+uint64_t set_items_sqared_sum(uint32_t *items, uint32_t n)
+{
+  uint64_t acc = 0;
+  for (uint32_t i = 0; i < n; ++i)
+    acc += ((uint64_t)items[i] * (uint64_t)items[i]);
+  return acc;
+}
+
+uint8_t is_in_hshtbl(hshtbl h, uint32_t *items, uint32_t n)
+{
+  uint64_t c = hash_func(set_items_sqared_sum(items, n));
+  hshtbl_node *node = h.arr[c];
+  while (node != NULL)
+  {
+    if (memcmp(items, node->items, n * sizeof(*items)) == 0)
+      return 1;
+
+    node = node->next;
+  }
+
+  return 0;
+}
+
+enum SET_SEARCH_RETVALS
+{
+  SIGSTOP = -1,
+  NOT_FOUND,
+  GUESS_FOUND,
+  COLLISION_FOUND,
+  RETVAL_COUNT
+};
+
 /*
- * returns negative value if search should stop
+ * returns:
+ * |> negative value if search should stop
+ * |> zero if nothing was found
+ * |> positive if a collision was found
  */
-int8_t check_if_set_can_be_formed_from_collision(hshtbl table, uint8_t *selected, const uint32_t *row_sum, const uint32_t *col_sum, const uint64_t sum, const uint64_t mu,
+int8_t check_if_set_can_be_formed_from_collision(hshtbl *found, hshtbl table, uint8_t *selected, const uint32_t *row_sum, const uint32_t *col_sum, const uint64_t sum, const uint64_t mu,
                                                  const uint32_t r, const uint32_t s, const uint32_t count, set_callback f, void *data)
 {
-  hshtbl_node *node = table[hash_func(mu - sum)];
+  hshtbl_node *node = table.arr[hash_func(mu - sum)];
   if (node == NULL)
-    return 0;
+    return NOT_FOUND;
 
   const uint32_t n = r * s;
 
@@ -318,6 +367,7 @@ int8_t check_if_set_can_be_formed_from_collision(hshtbl table, uint8_t *selected
     exit(1);
   }
 
+  uint8_t retval = NOT_FOUND;
   // found a least match if there are no repeated entries and the union respects the sum conditions
   do
   {
@@ -332,15 +382,29 @@ int8_t check_if_set_can_be_formed_from_collision(hshtbl table, uint8_t *selected
     for (uint32_t i = 0; i < n - count; ++i)
       selected[node->items[i]] = 1;
 
-    if (!(*f)(selected, n, data))
-      return -1;
+    uint32_t *items = calloc(n, sizeof(*node->items));
+    for (uint32_t k = 0, idx = 0; k < count && idx < n * n; ++idx)
+    {
+      if (selected[idx])
+        items[k++] = idx;
+    }
+    for (uint32_t k = count; k < n; ++k)
+      items[k] = node->items[k - count];
+
+    if (!is_in_hshtbl(*found, items, n))
+    {
+      retval = COLLISION_FOUND;
+      if (!(*f)(selected, n, data))
+        return SIGSTOP;
+      hshtbl_insert(found, items, n, set_items_sqared_sum(items, n));
+    }
 
     // remove entries from the match
     for (uint32_t i = 0; i < n - count; ++i)
       selected[node->items[i]] = 0;
   } while ((node = node->next) != NULL);
 
-  return 0;
+  return retval;
 }
 
 /*
@@ -360,13 +424,13 @@ uint8_t set_has_magic_sum(const uint8_t *selected, const pow_m_sqr M)
 
 /*
  * returns value is:
- * - positive if a set was found by random guessing
- * - zero if no set was found or some were found by collisions
+ * - positive if a set was found by random guessing or by collision
+ * - zero if no set was found
  * - negative if signal was sent by the callback
  *
  * calls back only when set has magic value, in contrast with iterate_over_sets
  */
-int8_t generate_random_set_with_magic_sum(hshtbl *table, const pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
+int8_t generate_random_set_with_magic_sum(hshtbl *found, hshtbl *table, const pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
 {
   const uint64_t n = r * s;
   uint8_t *selected = calloc(n * n, sizeof(uint8_t));
@@ -389,17 +453,15 @@ int8_t generate_random_set_with_magic_sum(hshtbl *table, const pow_m_sqr M, cons
   uint64_t sum = 0;
   uint32_t count = 0;
 
-  int8_t retval = 0;
+  int8_t retval = NOT_FOUND;
 
   while (count < n)
   {
     int32_t selected_bloc = select_open_bloc(selected, col_sum, row_sum, open_blocs, r, s);
     if (selected_bloc < 0)
-    // no valid blocs: abort
-    {
-      retval = 0;
+      // no valid blocs: abort with current search status (either NOT_FOUND or COLLISION_FOUND)
       goto ret;
-    }
+
     uint32_t selected_bi = selected_bloc / r;
     uint32_t selected_bj = selected_bloc % r;
 
@@ -420,11 +482,15 @@ int8_t generate_random_set_with_magic_sum(hshtbl *table, const pow_m_sqr M, cons
     if (count >= n)
       break; // we found a solution, dont insert nor check for collisions
 
-    hshtbl_insert(table[count - 1], items, count, sum); // -1 because hshtbl is zero indexed
+    hshtbl_insert(&(table[count - 1]), items, count, sum); // -1 because hshtbl is zero indexed
 
-    if (check_if_set_can_be_formed_from_collision(table[n - count - 1], selected, row_sum, col_sum, sum, mu, r, s, count, f, data) < 0)
+    int8_t ret = check_if_set_can_be_formed_from_collision(found, table[n - count - 1], selected, row_sum, col_sum, sum, mu, r, s, count, f, data);
+    if (ret > 0)
+      // we found something: update retval
+      retval = ret;
+    if (ret < 0)
     {
-      retval = -1;
+      retval = SIGSTOP;
       goto ret;
     }
 
@@ -439,18 +505,27 @@ int8_t generate_random_set_with_magic_sum(hshtbl *table, const pow_m_sqr M, cons
 
   if (set_has_magic_sum(selected, M))
   {
-    // sum was magic
-    if (!(*f)(selected, n, data))
+    for (uint32_t k = 0, idx = 0; idx < n * n; ++idx)
     {
-      retval = -1;
-      goto ret;
+      if (selected[idx])
+        items[k++] = idx;
     }
-    retval = 1;
+
+    if (!is_in_hshtbl(*found, items, n))
+    {
+      // sum was magic
+      hshtbl_insert(found, items, n, set_items_sqared_sum(items, n));
+      if (!(*f)(selected, n, data))
+      {
+        retval = SIGSTOP;
+        goto ret;
+      }
+    }
+    retval = GUESS_FOUND;
     goto ret;
   }
 
   // sum with non-magic sum
-  retval = 0;
 
 ret:
   free(selected);
@@ -462,10 +537,40 @@ ret:
   return retval;
 }
 
+#define MAX_ALLOWED_TRIES 1000
+
 void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
 {
   hshtbl *table = init_hshtbls(r * s);
-  while (generate_random_set_with_magic_sum(table, M, r, s, f, data) >= 0)
-    ;
+  hshtbl found = {0};
+
+  uint64_t tries = 0;
+  memset(found.arr, 0, sizeof(found.arr));
+  int8_t ret;
+  do
+  {
+    ret = generate_random_set_with_magic_sum(&found, table, M, r, s, f, data);
+    ++tries;
+    if (ret > 0)
+      tries = 0;
+
+    if (tries > MAX_ALLOWED_TRIES)
+    {
+      fprintf(stderr, "No set found for the last %u tries : stopping\n", MAX_ALLOWED_TRIES);
+      break;
+    }
+
+#ifndef __DEBUG__
+    clear();
+    mvprintw(0, 0, "%hhu\n%5llu, %llu", ret, tries, found.count);
+    refresh();
+#else
+    printf("\r%5llu, %llu", tries, found.count);
+    fflush(stdout);
+#endif
+  } while (ret >= 0);
+
+  free_hshtbls(table, r * s);
+  free_hshtbl(found);
   return;
 }

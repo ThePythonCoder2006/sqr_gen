@@ -254,13 +254,18 @@ int test(int argc, char **argv)
   taxicab T = {0};
   taxicab_init(&T, r, s, 2);
   find_taxicab(T);
-  // reps_to_taxicab(T, result_reps);
+// reps_to_taxicab(T, result_reps);
+#ifndef __DEBUG__
   initscr();
   mvtaxicab_print(0, 0, T);
   printw("is%s a (%d, %d, 2)-taxicab\n", is_taxicab(T) ? "" : " not", r, s);
   refresh();
   getch();
   endwin();
+#else
+  taxicab_printf(T);
+  printf("\nis%s a (%d, %d, 2)-taxicab\n", is_taxicab(T) ? "" : " not", r, s);
+#endif
   taxicab_clear(&T);
 
   // free(result_reps);

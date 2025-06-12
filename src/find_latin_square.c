@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #include "find_latin_squares.h"
 #include "latin_squares.h"
@@ -9,72 +8,118 @@
 typedef struct
 {
   uint64_t n;
-  bool **usedInRow;
-  bool **usedInCol;
+  uint8_t **usedInRow;
+  uint8_t **usedInCol;
   // bool inited;
 } state;
 
+#define LATIN_SQUARE_UNSET UINT64_MAX
+
 void init_arrays(state *s);
 void free_arrays(state *s);
-bool iterate_over_all_square_callback_inside(state *s, latin_square P, uint64_t row, uint64_t col, latin_square_callback callback);
+uint8_t iterate_over_all_square_callback_inside(state *s, latin_square *P, uint64_t row, uint64_t col, latin_square_callback callback, void *data);
 
 // state s = {.inited = false};
 
 // void print_latin_square(latin_square P)
 // {
-//   mvpow_m_sqr_print(0, 0, P);
+//   mvpow_m_sqr_printw(0, 0, P);
 // }
 
-bool iterate_over_all_square_callback(latin_square P, latin_square_callback callback)
+/*
+ * P is modified in place as well as being transmitted to callback
+ * callback should return non-zero for the search to continue
+ * returns non-zero if every latin square was exausted and zero if it stopped due to an interupt from callback
+ */
+uint8_t iterate_over_all_square_callback(latin_square *P, latin_square_callback callback, void *data)
 {
-  state s = {.n = P.n};
+  state s = {.n = P->n};
   init_arrays(&s);
-  bool ret = iterate_over_all_square_callback_inside(&s, P, 0, 0, callback);
+  for (uint32_t idx = 0; idx < P->n * P->n; ++idx)
+    M_SQR_GET_AS_VEC(*P, idx) = LATIN_SQUARE_UNSET;
+
+  // Fix first row: {0, 1, 2, ..., n - 1}
+  for (uint64_t col = 0; col < P->n; col++)
+  {
+    M_SQR_GET_AS_MAT(*P, 0, col) = col;
+    s.usedInRow[0][col] = 1;
+    s.usedInCol[col][col] = 1;
+  }
+
+  // start from second row, first column
+  uint8_t ret = iterate_over_all_square_callback_inside(&s, P, 1, 0, callback, data);
   free_arrays(&s);
   return ret;
 }
 
 // Recursive backtracking function to fill the square
-bool iterate_over_all_square_callback_inside(state *s, latin_square P, uint64_t row, uint64_t col, latin_square_callback callback)
+uint8_t iterate_over_all_square_callback_inside(state *s, latin_square *P, uint64_t row, uint64_t col, latin_square_callback callback, void *data)
 {
-  if (row == P.n)
-  {
-    (*callback)(P);
-    return false; // continue searching all solutions
-  }
+  // normally : 0 <= row < n but here we overflowed ie the square is full
+  if (row == P->n)
+    return (*callback)(P, data);
 
-  if (M_SQR_GET_AS_MAT(P, row, col) != 0)
+  if (M_SQR_GET_AS_MAT(*P, row, col) != LATIN_SQUARE_UNSET)
   {
     // Move to next cell
-    if (col == P.n - 1)
-      return iterate_over_all_square_callback_inside(s, P, row + 1, 0, callback);
+    if (col == P->n - 1)
+      return iterate_over_all_square_callback_inside(s, P, row + 1, 0, callback, data);
     else
-      return iterate_over_all_square_callback_inside(s, P, row, col + 1, callback);
+      return iterate_over_all_square_callback_inside(s, P, row, col + 1, callback, data);
   }
 
-  for (uint64_t num = 1; num <= P.n; num++)
+  for (uint64_t num = 0; num < P->n; num++)
   {
     if (!(s->usedInRow[row][num]) && !(s->usedInCol[col][num]))
     {
-      M_SQR_GET_AS_MAT(P, row, col) = num;
-      s->usedInRow[row][num] = true;
-      s->usedInCol[col][num] = true;
+      M_SQR_GET_AS_MAT(*P, row, col) = num;
+      s->usedInRow[row][num] = 1;
+      s->usedInCol[col][num] = 1;
 
       // Move to next cell
-      bool stop = (col == P.n - 1) ? iterate_over_all_square_callback_inside(s, P, row + 1, 0, callback)
-                                   : iterate_over_all_square_callback_inside(s, P, row, col + 1, callback);
+      uint8_t cont = (col == P->n - 1) ? iterate_over_all_square_callback_inside(s, P, row + 1, 0, callback, data)
+                                       : iterate_over_all_square_callback_inside(s, P, row, col + 1, callback, data);
 
       // Backtrack
-      M_SQR_GET_AS_MAT(P, row, col) = 0;
-      s->usedInRow[row][num] = false;
-      s->usedInCol[col][num] = false;
+      M_SQR_GET_AS_MAT(*P, row, col) = LATIN_SQUARE_UNSET;
+      s->usedInRow[row][num] = 0;
+      s->usedInCol[col][num] = 0;
 
-      if (stop)
-        return true;
+      if (!cont)
+        return 0;
     }
   }
 
-  return false;
+  return 1;
+}
+
+typedef struct
+{
+  latin_square *base;
+  uint64_t len;
+  latin_square_array_callback f;
+  void *data;
+} square_array_pack;
+
+uint8_t iterate_over_all_square_array_callback_inside(latin_square *P, void *data)
+{
+  square_array_pack *pack = (square_array_pack *)data;
+  latin_square *base = pack->base;
+  /*
+   * P - base == 0 on the first step
+   * hence the counting is done zero based ie we need to go only until P - base == len - 1
+   */
+  if ((uint64_t)(P - base) == pack->len - 1)
+    return (pack->f)(base, pack->len, pack->data);
+
+  // we do not need to handle stop here as the external function, which is not recursive, will just return once the search on the first element ended
+  return iterate_over_all_square_callback(P + 1, iterate_over_all_square_array_callback_inside, data);
+}
+
+uint8_t iterate_over_all_square_array_callback(latin_square *P, uint64_t len, latin_square_array_callback f, void *data)
+{
+  square_array_pack pack = {.base = P, .len = len, .f = f, .data = data};
+  return iterate_over_all_square_callback(P, iterate_over_all_square_array_callback_inside, &pack);
 }
 
 void init_arrays(state *s)
@@ -83,14 +128,14 @@ void init_arrays(state *s)
   s->usedInRow = malloc(s->n * sizeof(bool *));
   for (uint64_t i = 0; i < s->n; i++)
   {
-    s->usedInRow[i] = calloc(s->n + 1, sizeof(bool));
+    s->usedInRow[i] = calloc(s->n, sizeof(bool));
   }
 
   // Allocate usedInCol
   s->usedInCol = malloc(s->n * sizeof(bool *));
   for (uint64_t i = 0; i < s->n; i++)
   {
-    s->usedInCol[i] = calloc(s->n + 1, sizeof(bool));
+    s->usedInCol[i] = calloc(s->n, sizeof(bool));
   }
 }
 
