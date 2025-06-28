@@ -38,6 +38,36 @@ size_t pow_m_sqr_max_col_width(size_t *max, size_t *width, pow_m_sqr M)
  * max must be a non-NULL pointer to an array of length at least M.n
  * returns dwidth
  */
+size_t highlighted_square_max_col_width(size_t *max, size_t *width, highlighted_square M)
+{
+  assert(max != NULL);
+  char buff[32] = {0};
+
+  for (uint64_t j = 0; j < M.n; ++j)
+    for (uint64_t i = 0; i < M.n; ++i)
+    {
+      size_t l = snprintf(buff, 31, "%llu", M_SQR_GET_AS_MAT(M, i, j).val);
+      if (l > max[j])
+        max[j] = l;
+    }
+
+  size_t dwidth = snprintf(buff, 31, "%u", M.d);
+
+  *width = 1; // start '|'
+
+  for (uint64_t j = 0; j < M.n; ++j)
+  {
+    *width += max[j] + dwidth + 1; // + 1 for '|'
+    // mvprintw(j, 30, "%llu", max[j]);
+  }
+
+  return dwidth;
+}
+
+/*
+ * max must be a non-NULL pointer to an array of length at least M.n
+ * returns dwidth
+ */
 size_t taxi_max_col_width(size_t *max, size_t *width, taxicab T)
 {
   char buff[32] = {0};
@@ -66,7 +96,7 @@ size_t taxi_max_col_width(size_t *max, size_t *width, taxicab T)
 /*
  * if non-NULL, items must be of size n else it will not be used
  */
-void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, position *items1, position *items2, int BG_COLOR1, int BG_COLOR2)
+void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, uint32_t *items1, uint32_t *items2, int BG_COLOR1, int BG_COLOR2)
 {
   size_t *max = calloc(M.n, sizeof(size_t));
   if (max == NULL)
@@ -84,8 +114,8 @@ void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, position *items
     exit(1);
   }
   if (items1 != NULL)
-    for (uint64_t k = 0; k < M.n; ++k)
-      selected1[items1[k].i * M.n + items1[k].j] = 1;
+    for (uint64_t i = 0; i < M.n; ++i)
+      selected1[i * M.n + items1[i]] = 1;
 
   uint8_t *selected2 = calloc(M.n * M.n, sizeof(uint8_t));
   if (selected2 == NULL)
@@ -94,8 +124,8 @@ void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, position *items
     exit(1);
   }
   if (items2 != NULL)
-    for (uint64_t k = 0; k < M.n; ++k)
-      selected2[items2[k].i * M.n + items2[k].j] = 1;
+    for (uint64_t i = 0; i < M.n; ++i)
+      selected2[i * M.n + items2[i]] = 1;
 
   init_pair(1, COLOR_WHITE, BG_COLOR1);
   init_pair(2, COLOR_WHITE, BG_COLOR2);
@@ -190,6 +220,110 @@ void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, position *items
 void mvpow_m_sqr_printw(int y0, int x0, pow_m_sqr M)
 {
   mvpow_m_sqr_printw_highlighted(y0, x0, M, NULL, NULL, COLOR_BLACK, COLOR_BLACK);
+  return;
+}
+
+/*
+ * if non-NULL, items must be of size n else it will not be used
+ */
+void mvhighlighted_square_printw(int y0, int x0, highlighted_square M, int BG_COLOR1, int BG_COLOR2)
+{
+  size_t *max = calloc(M.n, sizeof(size_t));
+  if (max == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+  size_t width = 0;
+  size_t dwidth = highlighted_square_max_col_width(max, &width, M);
+
+  init_pair(1, COLOR_WHITE, BG_COLOR1);
+  init_pair(2, COLOR_WHITE, BG_COLOR2);
+
+  int x = x0,
+      y = y0;
+  mvaddch(y, x, ACS_ULCORNER);
+  mvvline(y + 1, x, 0, 3 * M.n);
+  mvhline(y, x + 1, 0, width - 1);
+
+  for (uint64_t i = 0; i < M.n; ++i)
+  {
+    x = x0 + 1;
+    y += 1;
+    for (uint64_t j = 0; j < M.n; ++j)
+    {
+      // x += max[j];
+      if (M_SQR_GET_AS_MAT(M, i, j).colour == 1)
+        attron(COLOR_PAIR(1));
+      else if (M_SQR_GET_AS_MAT(M, i, j).colour == 2)
+        attron(COLOR_PAIR(2));
+      x += mvprintw(y, x, "%*u", max[j] + 1, M.d);
+      attroff(COLOR_PAIR(1));
+      attroff(COLOR_PAIR(2));
+      if (i == 0)
+      {
+        if (j == M.n - 1)
+          mvaddch(y - 1, x, ACS_URCORNER);
+        else
+          mvaddch(y - 1, x, ACS_TTEE);
+      }
+      else
+      {
+        if (j == M.n - 1)
+          mvaddch(y - 1, x, ACS_RTEE);
+        else
+          mvaddch(y - 1, x, ACS_PLUS);
+      }
+
+      mvaddch(y, x, ACS_VLINE);
+      mvaddch(y + 1, x, ACS_VLINE);
+
+      if (j == 0)
+      {
+        mvhline(y + 2, x0 + 1, 0, width - 2);
+        if (i == M.n - 1)
+          mvaddch(y + 2, x0, ACS_LLCORNER);
+        else
+          mvaddch(y + 2, x0, ACS_LTEE);
+      }
+
+      if (i == M.n - 1)
+      {
+        if (j == M.n - 1)
+          mvaddch(y + 2, x, ACS_LRCORNER);
+        else
+          mvaddch(y + 2, x, ACS_BTEE);
+      }
+
+      ++x;
+    }
+
+    x = x0 + 1;
+    y += 1;
+
+    for (uint64_t j = 0; j < M.n; ++j)
+    {
+      if (M_SQR_GET_AS_MAT(M, i, j).colour == 1)
+        attron(COLOR_PAIR(1));
+      else if (M_SQR_GET_AS_MAT(M, i, j).colour == 2)
+        attron(COLOR_PAIR(2));
+      x += mvprintw(y, x, "%*llu", (int)max[j], M_SQR_GET_AS_MAT(M, i, j).val);
+      // x += dwidth + 1; // +1 for vertical seperator
+      for (uint32_t _ = 0; _ < dwidth; ++_)
+        x += mvprintw(y, x, " ");
+      ++x; // for vertical separator
+      attroff(COLOR_PAIR(1));
+      attroff(COLOR_PAIR(2));
+    }
+
+    y += 1;
+    x = x0;
+  }
+
+  move(y + 1, x0);
+
+  free(max);
+
   return;
 }
 

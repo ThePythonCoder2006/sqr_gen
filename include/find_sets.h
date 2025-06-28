@@ -6,8 +6,6 @@
 
 #include "pow_m_sqr.h"
 
-#define GET_AS_MAT(arr, i, j, width) ((arr)[(i) * (width) + (j)])
-
 /*
  * first argument contains array of bool accessible by GET_AS_MAT indicating where the selected entries are.
  * second argument is the width of the square

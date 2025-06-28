@@ -6,6 +6,12 @@
 #ifndef __LATIN_SQUARES__
 #define __LATIN_SQUARES__
 
-#include "pow_m_sqr.h"
+#include <stdint.h>
+
+typedef struct
+{
+  uint32_t n;
+  uint8_t *arr;
+} latin_square;
 
 #endif // __LATIN_SQUARES__

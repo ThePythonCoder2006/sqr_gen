@@ -24,6 +24,7 @@ typedef struct
 #define TAXI_GET_AS_MAT(T, i, j) ((T).arr[(i) * ((T).s) + (j)])
 #define TAXI_GET_AS_VEC(T, idx) ((T).arr[(idx)])
 
+uint64_t taxicab_sum_row(taxicab T, uint64_t i);
 uint8_t is_taxicab(taxicab T);
 uint8_t taxicab_cross_products_are_distinct(taxicab a, taxicab b);
 int taxicab_init(taxicab *T, uint64_t r, uint64_t s, uint64_t d);

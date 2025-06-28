@@ -235,7 +235,7 @@ uint64_t potential_taxicabs_from_progress(uint64_t r, uint64_t s, uint64_t X, ui
  * `T` is considered to have its first `progress` entries filled with valid entries
  * returns non-zero if a solution is found
  * solution is set in `T`
- * `*boards_tested` contains the count of boards "tested", ie the index of the current board in lexicographic order
+ * `*counter` contains the count of boards "tested", ie the index of the current board in lexicographic order
  */
 int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, perf_counter *perf, uint8_t setup)
 {
@@ -268,11 +268,11 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
 
   if (progress == T.r * T.s)
   {
-    mpz_add_ui(perf->boards_tested, perf->boards_tested, 1);
+    mpz_add_ui(perf->counter, perf->counter, 1);
     return is_taxicab(T);
   }
 
-  if ((mpz_get_ui(perf->boards_tested) & 0xffffff) == 0 && mpz_cmp_ui(perf->boards_tested, 0) != 0)
+  if ((mpz_get_ui(perf->counter) & 0xffffff) == 0 && mpz_cmp_ui(perf->counter, 0) != 0)
   {
 #ifndef __DEBUG__
     move(0, 0);
@@ -282,7 +282,7 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     print_perfw(*perf, "taxicabs");
     mvtaxicab_print(1, 0, T);
     char buff[256] = {0};
-    gmp_snprintf(buff, 255, "%Zu taxicabs have been rejected so far", perf->boards_tested);
+    gmp_snprintf(buff, 255, "%Zu taxicabs have been rejected so far", perf->counter);
     printw("%s.\n Current time: %lfs", buff, timer_stop(&(perf->time)));
     refresh();
 #endif
@@ -300,14 +300,14 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     mpz_init_set_si(diff, mu - partial_sum);
     if (mpz_cmp_ui(diff, 0) < 0)
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
       mpz_clear(diff);
       return 0;
     }
 
     if (!mpz_root(diff, diff, T.d))
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
       mpz_clear(diff);
       return 0;
     }
@@ -320,7 +320,7 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     // printf("%llu", GET_AS_VEC(T, progress));
     if (heat_map[TAXI_GET_AS_VEC(T, progress)])
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
       continue;
     }
     heat_map[TAXI_GET_AS_VEC(T, progress)] = 1;
@@ -328,13 +328,13 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     uint8_t flags = is_valid_partial_taxicab(T, progress);
     if (flags == PARTIAL_TAXICAB_NEXT)
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
       heat_map[TAXI_GET_AS_VEC(T, progress)] = 0;
       continue;
     }
     else if (flags == PARTIAL_TAXICAB_BREAK)
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
       heat_map[TAXI_GET_AS_VEC(T, progress)] = 0;
       break;
     }

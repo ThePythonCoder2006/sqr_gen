@@ -25,6 +25,8 @@
 #include "find_sets.h"
 #include "pow_m_sqr.h"
 
+#include "perf_counter.h"
+
 // forward declaration
 uint64_t ui_pow_ui(uint64_t x, uint64_t n);
 
@@ -131,6 +133,8 @@ uint8_t iterate_over_sets_callback_inside(sets_search_data *d, uint32_t current_
   return iterate_over_sets_callback_inside(d, current_row, current_col + 1, count, f, data);
 }
 
+// ----------- collision method ---------------
+
 #define HSHTBL_SIZE 10003 // big prime number
 
 typedef struct hshtbl_node_s
@@ -142,7 +146,7 @@ typedef struct hshtbl_node_s
 
 typedef struct
 {
-  uint64_t count;
+  size_t count;
   hshtbl_node *arr[HSHTBL_SIZE];
 } hshtbl;
 
@@ -199,16 +203,33 @@ static inline uint32_t hash_func(uint64_t x)
 }
 
 /*
- * modifies table
+  set1 and set2 MUST have the same size of count ie set2_selected MUST have exactly count entries equal to 1 and every other being 0
  */
-void hshtbl_insert(hshtbl *table, const uint32_t *items, const uint32_t count, const uint64_t sum)
+uint8_t sets_equal_items_selected(const uint32_t *set1_items, const uint8_t *set2_selected, const uint64_t count, const uint64_t n)
+{
+  for (uint64_t k = 0; k < count; ++k)
+  {
+    const uint32_t i = set1_items[k] / n;
+    const uint32_t j = set1_items[k] % n;
+    if (!GET_AS_MAT(set2_selected, i, j, n))
+      return 0;
+  }
+
+  return 1;
+}
+
+/*
+ * modifies table
+ * items and selected are different representations of the same data
+ */
+void hshtbl_insert(hshtbl *table, const uint32_t *items, const uint8_t *selected, const uint32_t count, const uint64_t sum, const uint64_t n)
 {
   uint64_t h = hash_func(sum);
 
   hshtbl_node *node = table->arr[h];
   while (node)
   {
-    if (memcmp(node->items, items, count * sizeof(uint32_t)) == 0)
+    if (sets_equal_items_selected(node->items, selected, count, n))
       return; // duplicate
     node = node->next;
   }
@@ -231,6 +252,85 @@ void hshtbl_insert(hshtbl *table, const uint32_t *items, const uint32_t count, c
   node->next = table->arr[h];
   table->arr[h] = node;
   ++table->count;
+  return;
+}
+
+typedef struct
+{
+  uint64_t mu;
+  pow_m_sqr *M;
+  hshtbl *found;     // pointer to single hshtbl to store already found solutions
+  hshtbl *tables;    // array of hshtbls of size (n - 1)
+  uint8_t *selected; // matrix of bools of size n x n
+  uint32_t *row_sum; // array of size s
+  uint32_t *col_sum; // array of size r
+  uint32_t *items;   // array of size n
+  // lists of entry indices of open blocs/cells, there are at most r * s
+  // they are both array of size r * s = s * r = n
+  uint32_t *open_blocs;
+  uint32_t *open_entries_in_bloc;
+  perf_counter perf;
+} state;
+
+void init_state(state *pack, const uint32_t r, const uint32_t s)
+{
+  const size_t n = r * s;
+  pack->tables = init_hshtbls(r * s);
+  pack->found = malloc(sizeof(*pack->found));
+  memset(pack->found->arr, 0, sizeof(pack->found->arr));
+  pack->found->count = 0;
+
+  pack->selected = calloc(n * n, sizeof(uint8_t));
+  pack->row_sum = calloc(s, sizeof(uint32_t));
+  pack->col_sum = calloc(r, sizeof(uint32_t));
+
+  pack->items = calloc(n, sizeof(uint32_t));
+
+  // lists of entry indices of open blocs/cells, there are at most r * s
+  pack->open_blocs = calloc(r * s, sizeof(uint32_t));
+  pack->open_entries_in_bloc = calloc(r * s, sizeof(uint32_t));
+
+  if (pack->selected == NULL || pack->row_sum == NULL || pack->col_sum == NULL || pack->items == NULL || pack->open_blocs == NULL || pack->open_entries_in_bloc == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  timer_start(&pack->perf.time);
+  mpz_init_set_ui(pack->perf.counter, 0);
+
+  return;
+}
+
+/*
+ * zeroes out the field that are specific to one iteration of the algorithm
+ */
+void reset_state(state *pack, const uint32_t r, const uint32_t s)
+{
+  const size_t n = r * s;
+  memset(pack->selected, 0, n * n * sizeof(*pack->selected));
+  memset(pack->row_sum, 0, s * sizeof(*pack->row_sum));
+  memset(pack->col_sum, 0, r * sizeof(*pack->col_sum));
+  memset(pack->items, 0, n * sizeof(*pack->items));
+  memset(pack->open_blocs, 0, n * sizeof(*pack->open_blocs));
+  memset(pack->open_entries_in_bloc, 0, n * sizeof(*pack->open_entries_in_bloc));
+  return;
+}
+
+void free_state(state pack, const uint32_t r, const uint32_t s)
+{
+  free(pack.selected);
+  free(pack.row_sum);
+  free(pack.col_sum);
+  free(pack.items);
+  free(pack.open_blocs);
+  free(pack.open_entries_in_bloc);
+
+  free_hshtbls(pack.tables, r * s);
+  free_hshtbl(*pack.found);
+
+  mpz_clear(pack.perf.counter);
+  (void)timer_stop(&pack.perf.time);
   return;
 }
 
@@ -350,14 +450,14 @@ enum SET_SEARCH_RETVALS
  * |> zero if nothing was found
  * |> positive if a collision was found
  */
-int8_t check_if_set_can_be_formed_from_collision(hshtbl *found, hshtbl table, uint8_t *selected, const uint32_t *row_sum, const uint32_t *col_sum, const uint64_t sum, const uint64_t mu,
-                                                 const uint32_t r, const uint32_t s, const uint32_t count, set_callback f, void *data)
+int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum, const uint32_t r, const uint32_t s, const uint32_t count, set_callback f, void *data)
 {
-  hshtbl_node *node = table.arr[hash_func(mu - sum)];
+  const uint32_t n = r * s;
+
+  hshtbl *table = pack->tables + (n - count - 1);
+  hshtbl_node *node = table->arr[hash_func(pack->mu - sum)];
   if (node == NULL)
     return NOT_FOUND;
-
-  const uint32_t n = r * s;
 
   uint32_t *row_sum_copy = calloc(s, sizeof(uint32_t));
   uint32_t *col_sum_copy = calloc(r, sizeof(uint32_t));
@@ -371,37 +471,45 @@ int8_t check_if_set_can_be_formed_from_collision(hshtbl *found, hshtbl table, ui
   // found a least match if there are no repeated entries and the union respects the sum conditions
   do
   {
-    // reset the row/col sum arrays
-    memcpy(row_sum_copy, row_sum, s * sizeof(uint32_t));
-    memcpy(col_sum_copy, col_sum, r * sizeof(uint32_t));
+    if (node->sum + sum != pack->mu)
+    {
+      // printf("%llu != %llu\n", node->sum + sum, pack->mu);
+      continue;
+    }
 
-    if (!are_compatible_sets(selected, node->items, row_sum_copy, col_sum_copy, r, s, count))
+    // reset the row/col sum arrays
+    memcpy(row_sum_copy, pack->row_sum, s * sizeof(uint32_t));
+    memcpy(col_sum_copy, pack->col_sum, r * sizeof(uint32_t));
+
+    if (!are_compatible_sets(pack->selected, node->items, row_sum_copy, col_sum_copy, r, s, count))
       continue;
 
     // add entries from the match
     for (uint32_t i = 0; i < n - count; ++i)
-      selected[node->items[i]] = 1;
+      pack->selected[node->items[i]] = 1;
 
     uint32_t *items = calloc(n, sizeof(*node->items));
     for (uint32_t k = 0, idx = 0; k < count && idx < n * n; ++idx)
     {
-      if (selected[idx])
+      if (pack->selected[idx])
         items[k++] = idx;
     }
     for (uint32_t k = count; k < n; ++k)
       items[k] = node->items[k - count];
 
-    if (!is_in_hshtbl(*found, items, n))
+    if (!is_in_hshtbl(*pack->found, items, n))
     {
       retval = COLLISION_FOUND;
-      if (!(*f)(selected, n, data))
+      mpz_add_ui(pack->perf.counter, pack->perf.counter, 1); // add to number of found sets
+      if (!(*f)(pack->selected, n, data))
         return SIGSTOP;
-      hshtbl_insert(found, items, n, set_items_sqared_sum(items, n));
+      hshtbl_insert(pack->found, items, pack->selected, n, set_items_sqared_sum(items, n), n);
     }
 
+    // cont:
     // remove entries from the match
     for (uint32_t i = 0; i < n - count; ++i)
-      selected[node->items[i]] = 0;
+      pack->selected[node->items[i]] = 0;
   } while ((node = node->next) != NULL);
 
   return retval;
@@ -417,7 +525,12 @@ uint8_t set_has_magic_sum(const uint8_t *selected, const pow_m_sqr M)
   for (uint32_t i = 0; i < M.n; ++i)
     for (uint32_t j = 0; j < M.n; ++j)
       if (GET_AS_MAT(selected, i, j, M.n))
+      {
+        printf("%llu^%u + ", M_SQR_GET_AS_MAT(M, i, j), M.d);
         acc += ui_pow_ui(M_SQR_GET_AS_MAT(M, i, j), M.d);
+      }
+
+  printf(" = %llu != %llu\n", acc, mu);
 
   return mu == acc;
 }
@@ -430,51 +543,54 @@ uint8_t set_has_magic_sum(const uint8_t *selected, const pow_m_sqr M)
  *
  * calls back only when set has magic value, in contrast with iterate_over_sets
  */
-int8_t generate_random_set_with_magic_sum(hshtbl *found, hshtbl *table, const pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
+int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
 {
   const uint64_t n = r * s;
-  uint8_t *selected = calloc(n * n, sizeof(uint8_t));
-  uint32_t *row_sum = calloc(s, sizeof(uint32_t));
-  uint32_t *col_sum = calloc(r, sizeof(uint32_t));
 
-  uint32_t *items = calloc(n, sizeof(uint32_t));
-
-  // lists of entry indices of open blocs/cells, there are at most r * s
-  uint32_t *open_blocs = calloc(r * s, sizeof(uint32_t));
-  uint32_t *open_entries_in_bloc = calloc(r * s, sizeof(uint32_t));
-
-  if (selected == NULL || row_sum == NULL || col_sum == NULL || items == NULL || open_blocs == NULL || open_entries_in_bloc == NULL)
-  {
-    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
-    exit(1);
-  }
-
-  const uint64_t mu = pow_m_sqr_sum_row(M, 0); // magic sum
   uint64_t sum = 0;
   uint32_t count = 0;
 
   int8_t retval = NOT_FOUND;
 
+  uint32_t test_entries1[] = {0x08, 0x17, 0x39, 0x3E,
+                              0x64, 0x53, 0x77, 0x48,
+                              0x8F, 0xBE, 0xA3, 0xB1,
+                              0xDA, 0xD0, 0xE7, 0xED};
+
+  uint32_t test_entries2[] = {0x2C, 0x0A, 0x26, 0x30,
+                              0x7B, 0x68, 0x60, 0x73,
+                              0x96, 0xB7, 0xAD, 0x84,
+                              0xD8, 0xCD, 0xDC, 0xF0};
+
   while (count < n)
   {
-    int32_t selected_bloc = select_open_bloc(selected, col_sum, row_sum, open_blocs, r, s);
+#if 0
+    int32_t selected_bloc = select_open_bloc(pack->selected, pack->col_sum, pack->row_sum, pack->open_blocs, r, s);
     if (selected_bloc < 0)
       // no valid blocs: abort with current search status (either NOT_FOUND or COLLISION_FOUND)
-      goto ret;
+      return retval;
 
     uint32_t selected_bi = selected_bloc / r;
     uint32_t selected_bj = selected_bloc % r;
 
-    ++(row_sum[selected_bi]);
-    ++(col_sum[selected_bj]);
+    ++(pack->row_sum[selected_bi]);
+    ++(pack->col_sum[selected_bj]);
 
     // get one entry from the list we selected
-    uint32_t selected_entry = select_open_entry_in_bloc(selected, open_entries_in_bloc, selected_bi, selected_bj, r, s);
-    // uint32_t selected_i = selected_entry / s;
-    // uint32_t selected_j = selected_entry % s;
+    uint32_t selected_entry = select_open_entry_in_bloc(pack->selected, pack->open_entries_in_bloc, selected_bi, selected_bj, r, s);
+#endif
+    uint32_t selected_entry = 1;
+    printf("%llu.\t", pack->found->count);
+    if (pack->found->count == 0)
+      selected_entry = test_entries1[count];
+    else if (pack->found->count == 1)
+      selected_entry = test_entries2[count];
+    else
+      fprintf(stderr, "What ??? found.count = %llu\n", pack->found->count);
+    printf("%u: %llu\n", selected_entry, M_SQR_GET_AS_VEC(M, selected_entry));
 
-    selected[selected_entry] = 1;
-    items[count++] = selected_entry;
+    pack->selected[selected_entry] = 1;
+    pack->items[count++] = selected_entry;
 
     sum += ui_pow_ui(M_SQR_GET_AS_VEC(M, selected_entry), M.d);
 
@@ -482,17 +598,14 @@ int8_t generate_random_set_with_magic_sum(hshtbl *found, hshtbl *table, const po
     if (count >= n)
       break; // we found a solution, dont insert nor check for collisions
 
-    hshtbl_insert(&(table[count - 1]), items, count, sum); // -1 because hshtbl is zero indexed
+    hshtbl_insert(&(pack->tables[count - 1]), pack->items, pack->selected, count, sum, n); // -1 because hshtbl is zero indexed
 
-    int8_t ret = check_if_set_can_be_formed_from_collision(found, table[n - count - 1], selected, row_sum, col_sum, sum, mu, r, s, count, f, data);
+    int8_t ret = check_if_set_can_be_formed_from_collision(pack, sum, r, s, count, f, data);
     if (ret > 0)
       // we found something: update retval
       retval = ret;
     if (ret < 0)
-    {
-      retval = SIGSTOP;
-      goto ret;
-    }
+      return SIGSTOP;
 
     /*
      * if we reached down there, count must have gone up by one from the line:
@@ -503,74 +616,96 @@ int8_t generate_random_set_with_magic_sum(hshtbl *found, hshtbl *table, const po
 
   // we randomly found a set
 
-  if (set_has_magic_sum(selected, M))
+  if (set_has_magic_sum(pack->selected, M))
   {
     for (uint32_t k = 0, idx = 0; idx < n * n; ++idx)
     {
-      if (selected[idx])
-        items[k++] = idx;
+      if (pack->selected[idx])
+        pack->items[k++] = idx;
     }
 
-    if (!is_in_hshtbl(*found, items, n))
+    if (!is_in_hshtbl(*pack->found, pack->items, n))
     {
       // sum was magic
-      hshtbl_insert(found, items, n, set_items_sqared_sum(items, n));
-      if (!(*f)(selected, n, data))
-      {
-        retval = SIGSTOP;
-        goto ret;
-      }
+      hshtbl_insert(pack->found, pack->items, pack->selected, n, set_items_sqared_sum(pack->items, n), n);
+      mpz_add_ui(pack->perf.counter, pack->perf.counter, 1);
+      if (!(*f)(pack->selected, n, data))
+        return SIGSTOP;
     }
-    retval = GUESS_FOUND;
-    goto ret;
+    return GUESS_FOUND;
   }
 
-  // sum with non-magic sum
+  // set with non-magic sum
 
-ret:
-  free(selected);
-  free(row_sum);
-  free(col_sum);
-  free(items);
-  free(open_blocs);
-  free(open_entries_in_bloc);
   return retval;
 }
 
-#define MAX_ALLOWED_TRIES 1000
+#define MAX_ALLOWED_TRIES 1
 
 void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
 {
-  hshtbl *table = init_hshtbls(r * s);
-  hshtbl found = {0};
+  const size_t n = r * s;
+
+  state pack = {0};
+  init_state(&pack, r, s);
+  pack.mu = pow_m_sqr_sum_row(M, 0); // magic sum
+  pack.M = &M;
 
   uint64_t tries = 0;
-  memset(found.arr, 0, sizeof(found.arr));
+  size_t *prev_counts = calloc((n - 1), sizeof(size_t));
+  uint8_t refresh_frames = 0;
+
   int8_t ret;
   do
   {
-    ret = generate_random_set_with_magic_sum(&found, table, M, r, s, f, data);
+    reset_state(&pack, r, s);
+    ret = generate_random_set_with_magic_sum(&pack, M, r, s, f, data);
     ++tries;
     if (ret > 0)
       tries = 0;
 
+    uint8_t changed = 0;
+    for (uint32_t k = 0; k < (n - 1); ++k)
+    {
+      /*
+       * check if we changed, then update the counts hence we cannot break
+       */
+      if (pack.tables[k].count > prev_counts[k])
+        changed = 1;
+      prev_counts[k] = pack.tables[k].count;
+    }
+
+    if (changed)
+      tries = 0;
+
     if (tries > MAX_ALLOWED_TRIES)
     {
-      fprintf(stderr, "No set found for the last %u tries : stopping\n", MAX_ALLOWED_TRIES);
+      fprintf(stderr, "No set (partial nor total) found for the last %u tries : aborting\n", MAX_ALLOWED_TRIES);
       break;
     }
 
 #ifndef __DEBUG__
-    clear();
-    mvprintw(0, 0, "%hhu\n%5llu, %llu", ret, tries, found.count);
-    refresh();
+    if (refresh_frames == 0)
+    {
+      clear();
+      move(0, 0);
+      for (uint32_t i = 0; i < (n - 1); ++i)
+        printw("%llu, ", pack.tables[i].count);
+      addch('\n');
+
+      char buff[256] = {0};
+      gmp_snprintf(buff, 255, "%7llu, %Zu", tries, pack.perf.counter);
+      printw("%s\n", buff);
+      print_perfw(pack.perf, "sets");
+      refresh();
+    }
 #else
-    printf("\r%5llu, %llu", tries, found.count);
-    fflush(stdout);
+    // gmp_printf("\r%5llu, %Zu", tries, pack.perf.boards_tested);
+    // fflush(stdout);
 #endif
+    ++refresh_frames;
   } while (ret >= 0);
 
-  free_hshtbls(table, r * s);
-  free_hshtbl(found);
+  free_state(pack, r, s);
   return;
 }

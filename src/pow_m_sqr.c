@@ -18,7 +18,7 @@
 #include "gmp.h"
 #include "curses.h"
 
-#define REQUIERED_SETS 5
+#define REQUIERED_SETS 2
 
 /*
  * sums the entries of the j-th column of M into ret
@@ -167,11 +167,14 @@ uint8_t check_sums(pow_m_sqr M)
   uint64_t mu, curr;
 
   mu = pow_m_sqr_sum_row(M, 0);
+  printw("mu = %llu\n", mu);
 
   curr = pow_m_sqr_sum_diag1(M);
+  printw("diag1: %llu\n", curr);
   if (curr != mu)
     return 0;
   curr = pow_m_sqr_sum_diag2(M);
+  printw("diag2: %llu\n", curr);
   if (curr != mu)
     return 0;
   return 1;
@@ -332,7 +335,7 @@ uint64_t potential_boards_from_progress(uint64_t n, uint64_t X, uint64_t progres
  * base is considered to have its first progress entires filled with valid entries
  * returns non-zero if a solution is found
  * solution is set in `base`
- * `*boards_tested` contains the count of boards "tested", ie the index of the current board in lexicographic order
+ * `*counter` contains the count of boards "tested", ie the index of the current board in lexicographic order
  */
 int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *heat_map, perf_counter *perf)
 {
@@ -345,11 +348,11 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
 
   if (progress == base.n * base.n)
   {
-    mpz_add_ui(perf->boards_tested, perf->boards_tested, 1);
+    mpz_add_ui(perf->counter, perf->counter, 1);
     return is_pow_m_sqr(base);
   }
 
-  if ((mpz_get_ui(perf->boards_tested) & 0xffffff) == 0 && mpz_cmp_ui(perf->boards_tested, 0) != 0)
+  if ((mpz_get_ui(perf->counter) & 0xffffff) == 0 && mpz_cmp_ui(perf->counter, 0) != 0)
   {
 #ifndef __DEBUG__
     move(0, 0);
@@ -359,14 +362,14 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     print_perfw(*perf, "grids");
     mvpow_m_sqr_printw(1, 0, base);
     char buff[256] = {0};
-    gmp_snprintf(buff, 255, "%Zu boards have been rejected so far", perf->boards_tested);
+    gmp_snprintf(buff, 255, "%Zu boards have been rejected so far", perf->counter);
     printw("%s.\n Current time: %lfs", buff, timer_stop(&(perf->time)));
     refresh();
 #else
     printf("average speed = ");
     printf_perf(*perf, "grids");
     pow_m_sqr_printf(base);
-    gmp_printf("%Zu boards have been rejected so far.\n Current time: %lfs\n", perf->boards_tested, timer_stop(&perf->time));
+    gmp_printf("%Zu boards have been rejected so far.\n Current time: %lfs\n", perf->counter, timer_stop(&perf->time));
 #endif
   }
 
@@ -382,7 +385,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     mpz_init_set_si(diff, mu - partial_sum);
     if (!mpz_root(diff, diff, base.d))
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_boards_from_progress(base.n, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_boards_from_progress(base.n, X, progress));
       mpz_clear(diff);
       return 0;
     }
@@ -395,7 +398,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     // printf("%llu", M_SQR_GET_AS_VEC(base, progress));
     if (heat_map[M_SQR_GET_AS_VEC(base, progress)])
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_boards_from_progress(base.n, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_boards_from_progress(base.n, X, progress));
       continue;
     }
     heat_map[M_SQR_GET_AS_VEC(base, progress)] = 1;
@@ -403,13 +406,13 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     uint8_t flags = is_valid_partial_pow_m_sqr(base, progress);
     if (flags == PARTIAL_M_SQR_NEXT)
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_boards_from_progress(base.n, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_boards_from_progress(base.n, X, progress));
       heat_map[M_SQR_GET_AS_VEC(base, progress)] = 0;
       continue;
     }
     else if (flags == PARTIAL_M_SQR_BREAK)
     {
-      mpz_add_ui(perf->boards_tested, perf->boards_tested, potential_boards_from_progress(base.n, X, progress));
+      mpz_add_ui(perf->counter, perf->counter, potential_boards_from_progress(base.n, X, progress));
       heat_map[M_SQR_GET_AS_VEC(base, progress)] = 0;
       break;
     }
@@ -481,8 +484,8 @@ void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square
         {
           latin_square P_j = GET_AS_VEC_IF_NONNULL(P, j);
           latin_square Q_i = GET_AS_VEC_IF_NONNULL(Q, i);
-          uint64_t P_jiv = M_SQR_GET_AS_MAT(P_j, i, v);
-          uint64_t Q_iju = M_SQR_GET_AS_MAT(Q_i, j, u);
+          uint64_t P_jiv = GET_AS_MAT(P_j.arr, i, v, P_j.n);
+          uint64_t Q_iju = GET_AS_MAT(Q_i.arr, j, u, Q_i.n);
           uint64_t a_idx = TAXI_GET_AS_MAT(a, j, P_jiv);
           uint64_t b_idx = TAXI_GET_AS_MAT(b, i, Q_iju);
           // if (i == 0 && j == 0 && u == 0 && v == 0)
@@ -540,22 +543,6 @@ void permute_cols(pow_m_sqr M, uint64_t *permut)
     M.cols[permut[j]] = t[j];
 
   free(t);
-  return;
-}
-
-void transpose_cols(pow_m_sqr M, uint64_t i, uint64_t j)
-{
-  uint32_t t = M.cols[i];
-  M.cols[i] = M.cols[j];
-  M.cols[j] = t;
-  return;
-}
-
-void transpose_rows(pow_m_sqr M, uint64_t i, uint64_t j)
-{
-  uint32_t t = M.rows[i];
-  M.rows[i] = M.rows[j];
-  M.rows[j] = t;
   return;
 }
 
@@ -699,7 +686,7 @@ void generate_siamese(pow_m_sqr M)
 
 typedef struct da_sets_s
 {
-  position **items;
+  uint32_t **items;
   size_t count;
   size_t capacity;
   uint32_t n; // size of each set
@@ -717,12 +704,11 @@ uint8_t search_pow_m_sqr_from_taxicab_iterate_over_sets_callback(uint8_t *select
 
   if (set_has_magic_sum(selected, *(pack->M)))
   {
-    position *set = calloc(n, sizeof(position));
-    uint32_t idx = 0;
+    uint32_t *set = calloc(n, sizeof(uint32_t));
     for (uint32_t i = 0; i < n; ++i)
       for (uint32_t j = 0; j < n; ++j)
         if (GET_AS_MAT(selected, i, j, n))
-          set[idx++] = (position){.i = i, .j = j};
+          set[i] = j;
     da_append((pack->rels), set);
   }
   // printf("%u\n", pack->rels->count);
@@ -736,12 +722,16 @@ uint8_t search_pow_m_sqr_from_taxicab_find_sets_collision_callback(uint8_t *sele
 
   // find_sets_print_selection(selected, n, NULL);
 
-  position *set = calloc(n, sizeof(position));
-  uint32_t idx = 0;
+  uint64_t acc = 0;
+  uint32_t *set = calloc(n, sizeof(uint32_t));
   for (uint32_t i = 0; i < n; ++i)
     for (uint32_t j = 0; j < n; ++j)
       if (GET_AS_MAT(selected, i, j, n))
-        set[idx++] = (position){.i = i, .j = j};
+      {
+        set[i] = j;
+        acc += ui_pow_ui(M_SQR_GET_AS_MAT(*pack->M, i, j), pack->M->d);
+      }
+  printf("set sum = %llu\n", acc);
   da_append((pack->rels), set);
 
   // printf("%u\n", pack->rels->count);
@@ -755,19 +745,21 @@ typedef struct
    * Q = array of size s of latin_squares of side r
    */
   latin_square *P, *Q;
+  pow_m_sqr *M;
   uint32_t r, s;
   da_sets rels, mark;
+  perf_counter perf;
 } iterate_over_latin_squares_array_pack;
 
-uint8_t fall_on_different_line_after_latin_squares(position *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s);
+uint8_t fall_on_different_line_after_latin_squares(uint32_t *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s);
 void print_iterate_over_latin_squares_array_pack(iterate_over_latin_squares_array_pack *pack);
-void printf_rel(position *rel, const size_t n);
-uint8_t rels_are_disjoint(position *rel1, position *rel2, const size_t n);
-uint8_t rels_are_compatible(position *rel1, position *rel2, const size_t n);
+void printf_rel(uint32_t *rel, const size_t n);
+uint8_t rels_are_disjoint(uint32_t *rel1, uint32_t *rel2, const size_t n);
+uint8_t rels_are_compatible(uint32_t *rel1, uint32_t *rel2, const size_t n);
 
 uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data);
 uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data);
-uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark);
+uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark);
 
 // start the search on Q
 uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data)
@@ -781,22 +773,32 @@ uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data)
 {
   (void)_1, (void)_2;
   iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
-  return !check_for_compatibility_in_latin_squares(pack->P, pack->Q, pack->r, pack->s, pack->rels, pack->mark);
+#ifndef __DEBUG__
+  clear();
+  move(0, 0);
+  char buff[256] = {0};
+  gmp_snprintf(buff, 255, "%Zu arrays of taxicabs tested so far", pack->perf.counter);
+  printw("%s\n", buff);
+  print_perfw(pack->perf, "arrays of taxicabs");
+  refresh();
+#endif
+  mpz_add_ui(pack->perf.counter, pack->perf.counter, 1);
+  return !check_for_compatibility_in_latin_squares(pack->P, pack->Q, pack->M, pack->r, pack->s, pack->rels, pack->mark);
 }
 
 /*
  * returns non-zero iff two compatible sets exist within the latin_square provided
  */
-uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark)
+uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark)
 {
   const uint64_t n = r * s;
 
-  da_foreach(position *, rel, &rels)
+  da_foreach(uint32_t *, rel, &rels)
   {
     if (!fall_on_different_line_after_latin_squares(*rel, P, Q, r, s))
       continue;
 
-    da_foreach(position *, prev_rel, &mark)
+    da_foreach(uint32_t *, prev_rel, &mark)
     {
       if (rels_are_compatible(*rel, *prev_rel, n))
       {
@@ -806,6 +808,27 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
         putchar('\n');
         printf_rel(*prev_rel, n);
         putchar('\n');
+#ifndef __DEBUG__
+        clear();
+        mvpow_m_sqr_printw_highlighted(0, 0, *M, *rel, *prev_rel, COLOR_YELLOW, COLOR_CYAN);
+        refresh();
+        getch();
+#endif
+
+        permute_into_pow_m_sqr(M, *rel, *prev_rel);
+
+#ifndef __DEBUG__
+
+        uint32_t main_diag[6] = {0, 1, 2, 3, 4, 5};
+        uint32_t anti_diag[6] = {5, 4, 3, 2, 1, 0};
+
+        clear();
+        mvpow_m_sqr_printw_highlighted(0, 0, *M, main_diag, anti_diag, COLOR_YELLOW, COLOR_CYAN);
+        printw("is%s a magic square of %u-th powers", is_pow_m_sqr(*M) ? "" : " not", M->d);
+        getch();
+
+        endwin();
+#endif
         return 1; // quit the search
       }
     }
@@ -815,9 +838,11 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
   return 0;
 }
 
-uint8_t find_set_compatible_latin_squares_array(latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark)
+uint8_t find_set_compatible_latin_squares_array(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark)
 {
-  iterate_over_latin_squares_array_pack pack = {.P = P, .Q = Q, .r = r, .s = s, .rels = rels, .mark = mark};
+  iterate_over_latin_squares_array_pack pack = {.P = P, .Q = Q, M, .r = r, .s = s, .rels = rels, .mark = mark};
+  mpz_init_set_ui(pack.perf.counter, 0);
+  timer_start(&pack.perf.time);
   return iterate_over_all_square_array_callback(P, r, compat_callback1, &pack);
 }
 
@@ -831,6 +856,8 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
 
   // fill M with a semi magic square from standart latin squares
   pow_semi_m_sqr_from_taxicab(M, a, b, NULL, NULL);
+
+  printf("mu = %llu\n", pow_m_sqr_sum_row(M, 0));
 
   /*
    * TODO: we are currently leaking rels
@@ -850,7 +877,7 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
 
 #ifndef __DEBUG__
   clear();
-  printw("%llu\n", rels.count);
+  printw("found: %llu sets\n", rels.count);
   // for (uint32_t k = 0; k < M.n; ++k)
   //   printf("(%u, %u), ", rels.items[0][k].i, rels.items[0][k].j);
   // putchar('\n');
@@ -860,6 +887,12 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
 #else
   printf("%llu\n", rels.count);
 #endif
+
+  if (rels.count < 2)
+  {
+    fprintf(stderr, "[ABORT] Found %llu < 2 sets.", rels.count);
+    return;
+  }
 
   // arrays holding the latin squares
   latin_square *P = calloc(a.r, sizeof(latin_square));
@@ -876,7 +909,7 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
     latin_square_init(&(Q[i]), a.r);
 
   da_sets mark = {.n = M.n};
-  printf("was%s able to find compatible latin square from the found sets\n", !find_set_compatible_latin_squares_array(P, Q, a.r, a.s, rels, mark) ? "" : " not");
+  printf("was%s able to find compatible latin square from the found sets\n", !find_set_compatible_latin_squares_array(P, Q, &M, a.r, a.s, rels, mark) ? "" : " not");
 
   return;
 }
@@ -885,10 +918,8 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
  * P must be of length r and Q of length s
  * P must hold square of size s and Q must hold squares of size r
  */
-position position_after_latin_square_permutation(position standart_latin_square_pos, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
+void position_after_latin_square_permutation(uint32_t *ret_row, uint32_t *ret_col, uint32_t row, uint32_t col, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
 {
-  uint32_t row = standart_latin_square_pos.i;
-  uint32_t col = standart_latin_square_pos.j;
   uint32_t i = row / r; // 0 <= i < s
   uint32_t j = col / s; // 0 <= j < r
   uint32_t u = row % r; // 0 <= u < r
@@ -922,7 +953,7 @@ position position_after_latin_square_permutation(position standart_latin_square_
   uint32_t v_prime;
   for (v_prime = 0; v_prime < s; ++v_prime)
   {
-    if (M_SQR_GET_AS_MAT(P[j], i, v_prime) == P_standart_iv)
+    if (GET_AS_MAT(P[j].arr, i, v_prime, P[j].n) == P_standart_iv)
       break;
     if (v_prime == s - 1)
     // last iteration and we did not hit it: absurd there must be a cell with value (i + v) % r in P[j], by construction of a latin square
@@ -937,28 +968,22 @@ position position_after_latin_square_permutation(position standart_latin_square_
   uint32_t u_prime;
   for (u_prime = 0; u_prime < r; ++u_prime)
   {
-    if (M_SQR_GET_AS_MAT(Q[i], j, u_prime) == Q_standart_ju)
+    if (GET_AS_MAT(Q[i].arr, j, u_prime, Q[i].n) == Q_standart_ju)
       break;
     if (u_prime == r - 1)
     // last iteration and we did not hit it: absurd there must be a cell with value (j + u) % s in Q[i], by construction of a latin square
     {
       fprintf(stderr, "[UNREACHABLE] Q: %ux%u latin square with no %u in row %u\n", Q[i].n, Q[i].n, Q_standart_ju, j);
-#ifndef __DEBUG__
-      clear();
-      mvpow_m_sqr_printw(0, 0, Q[i]);
-      getch();
-#else
-      pow_m_sqr_printf(Q[i]);
-      putchar('\n');
-#endif
       exit(1);
     }
   }
 
-  return (position){.i = i * r + u_prime, .j = j * s + v_prime};
+  *ret_row = i * r + u_prime;
+  *ret_col = j * s + v_prime;
+  return;
 }
 
-uint8_t fall_on_different_line_after_latin_squares(position *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
+uint8_t fall_on_different_line_after_latin_squares(uint32_t *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
 {
   const uint64_t n = r * s;
   uint8_t *rows = calloc(n, sizeof(uint8_t));
@@ -966,11 +991,12 @@ uint8_t fall_on_different_line_after_latin_squares(position *poses, latin_square
   for (uint64_t i = 0; i < n; ++i)
   {
     // printf("[2] %u, %u\n", poses[i].i, poses[i].j);
-    position new_pos = position_after_latin_square_permutation(poses[i], P, Q, r, s);
-    if (rows[new_pos.i] || cols[new_pos.j])
+    uint32_t new_row = 0, new_col = 0;
+    position_after_latin_square_permutation(&new_row, &new_col, i, poses[i], P, Q, r, s);
+    if (rows[new_row] || cols[new_col])
       return 0;
-    rows[new_pos.i] = 1;
-    cols[new_pos.j] = 1;
+    rows[new_row] = 1;
+    cols[new_col] = 1;
   }
 
   free(rows);
@@ -978,40 +1004,26 @@ uint8_t fall_on_different_line_after_latin_squares(position *poses, latin_square
   return 1;
 }
 
-void print_iterate_over_latin_squares_array_pack(iterate_over_latin_squares_array_pack *pack)
+void printf_rel(uint32_t *rel, const size_t n)
 {
-#ifndef __DEBUG__
-  clear();
-  for (uint32_t i = 0; i < pack->s; ++i)
-    mvpow_m_sqr_printw(0, i * 5 * pack->r, pack->P[i]);
-
-  for (uint32_t i = 0; i < pack->r; ++i)
-    mvpow_m_sqr_printw(5 * pack->r + 2, i * 5 * pack->s, pack->Q[i]);
-#else
-  (void)pack;
-#endif
+  for (size_t i = 0; i < n; ++i)
+    printf("(%llu, %u), ", i, rel[i]);
 
   return;
 }
 
-void printf_rel(position *rel, const size_t n)
+uint8_t rels_are_disjoint(uint32_t *rel1, uint32_t *rel2, const size_t n)
 {
-  for (size_t k = 0; k < n; ++k)
-    printf("(%u, %u), ", rel[k].i, rel[k].j);
-
-  return;
-}
-
-uint8_t rels_are_disjoint(position *rel1, position *rel2, const size_t n)
-{
-  for (size_t k = 0; k < n; ++k)
-    if (rel1[k].i == rel2[k].i || rel1[k].j == rel2[k].j)
+  // check for every row if they intersect
+  // Could be replaced with a memcmp
+  for (size_t i = 0; i < n; ++i)
+    if (rel1[i] == rel2[i])
       return 0;
 
   return 1;
 }
 
-uint8_t rels_are_compatible(position *rel1, position *rel2, const size_t n)
+uint8_t rels_are_compatible(uint32_t *rel1, uint32_t *rel2, const size_t n)
 {
   if (!rels_are_disjoint(rel1, rel2, n))
     return 0;
@@ -1031,172 +1043,83 @@ uint8_t rels_are_compatible(position *rel1, position *rel2, const size_t n)
    * rel1 and rel2 are compatible iff i = j = (n - 1)/2 if n is odd
    */
 
-  uint64_t top_count = 0;
   uint64_t left_count = 0;
 
-  (void)top_count, (void)left_count;
+  for (size_t i = 0; i < n; ++i)
+    // check in row i if rel2 (blue) is before rel1 (yellow)
+    left_count += rel2[i] < rel1[i];
 
-  fprintf(stderr, "[TODO] Not (yet) implemented");
+  // n / 2 rounds correctly for both parity cases
+  if (left_count != n / 2)
+    return 0;
 
-  return 1;
+  uint64_t top_count = 0;
+  for (size_t j = 0; j < n; ++j)
+  {
+    // find the rows where the elements in column j are in both rels
+    // check if rel2 (blue) is higher than rel1 (yellow)
+    size_t idx1_j = 0;
+    for (; idx1_j < n && rel1[idx1_j] != j; ++idx1_j)
+      ;
+    size_t idx2_j = 0;
+    for (; idx2_j < n && rel2[idx2_j] != j; ++idx2_j)
+      ;
+    top_count += idx2_j < idx1_j;
+  }
+
+  return top_count == n / 2;
 }
 
-void permute_into_pow_m_sqr(pow_m_sqr M, position *diag1, position *diag2)
+/*
+ * diag[i] must be the column of the element of the set on line i
+ * modifies M
+ */
+void permute_into_pow_m_sqr(pow_m_sqr *M, uint32_t *diag1, uint32_t *diag2)
 {
-  const uint64_t n = M.n;
-  // transpose the main diagonal into place:
-  for (uint64_t j = 0; j < n; ++j)
+  const uint64_t n = M->n;
+
+  highlighted_square H = {0};
+  highlighted_square_init(&H, n, M->d);
+  highlighted_square_from_pow_m_sqr(&H, M, diag1, diag2);
+
+  uint32_t *rel1 = calloc(n, sizeof(uint32_t));
+  uint32_t *rel2 = calloc(n, sizeof(uint32_t));
+
+  // fix the main diag
+  for (uint32_t i = 0; i < n; ++i)
   {
-    uint32_t col = diag1[j].j;
-    transpose_cols(M, col, j);
-
-    // position of the j-th column in the array diag1
-    uint64_t idx1 = 0;
-    for (; idx1 < n; ++idx1)
-      if (diag1[idx1].j == j)
-        break;
-
-    // fix diag1
-    uint64_t k = 0;
-    for (; k < n; ++k)
-      if (diag1[k].j == col)
-        break;
-    diag1[idx1].j = diag1[k].j;
-    diag1[k].j = j;
-
-    // position of the j-th column in the array diag2
-    uint64_t idx2 = 0;
-    for (; idx2 < n; ++idx2)
-      if (diag2[idx2].j == j)
-        break;
-
-    // fix diag2
-    k = 0;
-    for (; k < n; ++k)
-      if (diag2[k].j == col)
-        break;
-    uint32_t t = diag2[idx2].j;
-    diag2[idx2].j = diag2[k].j;
-    diag2[k].j = t;
-
-    // printf("%hhd\n", parity_of_sets(diag1, diag2, M.n));
-
-#ifndef __DEBUG__
-    // clear();
-    // mvpow_m_sqr_printw_highlighted(0, 0, M, diag1, diag2, COLOR_YELLOW, COLOR_CYAN);
-    // printw("%hhd\n", parity_of_sets(diag1, diag2, M.n));
-    // refresh();
-    // getch();
-#else
-    // pow_m_sqr_printf(M);
-    // putchar('\n');
-#endif
+    rels_from_highlighted_square(rel1, rel2, &H);
+    uint32_t col = rel1[i];
+    // swap columns i and rel1[i]
+    uint32_t t = H.cols[i];
+    H.cols[i] = H.cols[col];
+    H.cols[col] = t;
   }
 
-  // printf("----------------------\n");
-
-#ifndef __DEBUG__
-  // clear();
-  // mvpow_m_sqr_printw_highlighted(0, 0, M, diag1, diag2, COLOR_YELLOW, COLOR_CYAN);
-  // refresh();
-  // getch();
-#else
-  // pow_m_sqr_printf(M);
-  // putchar('\n');
-#endif
-
-  // transpose the anti-diagonal into place:
-  for (uint64_t j = 0; j < n; ++j)
+  // fix the anti-diag
+  for (uint32_t i = 0; i < n; ++i)
   {
-    uint32_t col = diag2[j].j;
-    transpose_cols(M, col, j);
+    rels_from_highlighted_square(rel1, rel2, &H);
+    uint32_t col = (n - 1) - rel2[i];
 
-    // position of the j-th column in the array diag1
-    uint64_t idx1 = 0;
-    for (; idx1 < n; ++idx1)
-      if (diag1[idx1].j == j)
-        break;
+    // swap columns i and col
+    uint32_t t = H.cols[i];
+    H.cols[i] = H.cols[col];
+    H.cols[col] = t;
 
-    // fix diag1
-    uint64_t k = 0;
-    for (; k < n; ++k)
-      if (diag1[k].j == col)
-        break;
-    diag1[idx1].j = diag1[k].j;
-    diag1[k].j = j;
-
-    // position of the j-th column in the array diag2
-    uint64_t idx2 = 0;
-    for (; idx2 < n; ++idx2)
-      if (diag2[idx2].j == j)
-        break;
-
-    // fix diag2
-    k = 0;
-    for (; k < n; ++k)
-      if (diag2[k].j == col)
-        break;
-    uint32_t t = diag2[idx2].j;
-    diag2[idx2].j = diag2[k].j;
-    diag2[k].j = t;
-
-    // printf("%hhd, ", parity_of_sets(diag1, diag2, M.n));
-
-#ifndef __DEBUG__
-    // clear();
-    // mvpow_m_sqr_printw_highlighted(0, 0, M, diag1, diag2, COLOR_YELLOW, COLOR_CYAN);
-    // printw("%hhd\n", parity_of_sets(diag1, diag2, M.n));
-    // refresh();
-    // getch();
-#else
-    // pow_m_sqr_printf(M);
-    // putchar('\n');
-#endif
-
-    transpose_rows(M, col, j);
-
-    // position of the j-th row in the array diag1
-    idx1 = 0;
-    for (; idx1 < n; ++idx1)
-      if (diag1[idx1].i == j)
-        break;
-
-    // fix diag1
-    k = 0;
-    for (; k < n; ++k)
-      if (diag1[k].i == col)
-        break;
-    diag1[idx1].i = diag1[k].i;
-    diag1[k].i = j;
-
-    // position of the j-th column in the array diag2
-    idx2 = 0;
-    for (; idx2 < n; ++idx2)
-      if (diag2[idx2].i == j)
-        break;
-
-    // fix diag2
-    k = 0;
-    for (; k < n; ++k)
-      if (diag2[k].i == col)
-        break;
-    t = diag2[idx2].i;
-    diag2[idx2].i = diag2[k].i;
-    diag2[k].i = t;
-
-    // printf("%hhd\n", parity_of_sets(diag1, diag2, M.n));
-
-#ifndef __DEBUG__
-    // clear();
-    // mvpow_m_sqr_printw_highlighted(0, 0, M, diag1, diag2, COLOR_YELLOW, COLOR_CYAN);
-    // printw("%hhd\n", parity_of_sets(diag1, diag2, M.n));
-    // refresh();
-    // getch();
-#else
-    // pow_m_sqr_printf(M);
-    // putchar('\n');
-#endif
+    // swap rows i and col to fix the main diag we modified on the first swap
+    t = H.rows[i];
+    H.rows[i] = H.rows[col];
+    H.rows[col] = t;
   }
+
+  // rel1 and rel2 are here by pure formality, we dont use them afterwards
+  // this could be optimized by making a new function but I'm optimizing my time by not writing it...
+  pow_m_sqr_from_highlighted_square(M, rel1, rel2, &H);
+
+  free(rel1);
+  free(rel2);
+  highlighted_square_clear(&H);
 
   return;
 }
@@ -1204,13 +1127,13 @@ void permute_into_pow_m_sqr(pow_m_sqr M, position *diag1, position *diag2)
 /*
  * returns the parity of the permutation changing the two sets, rel1 and rel2, into the two main diags
  */
-int8_t parity_of_sets(position *rel1, position *rel2, const uint64_t n)
+int8_t parity_of_sets(uint32_t *rel1, uint32_t *rel2, const size_t n)
 {
   int8_t ret = 1;
 
-  for (uint64_t idx = 0; idx < n; ++idx)
+  for (size_t i = 0; i < n; ++i)
   {
-    if (rel1[idx].i != rel1[idx].j || rel1[idx].i != (n - 1) - rel1[idx].j)
+    if (rel1[i] != i)
     {
       // will need to be transposed
       ret *= -1;
@@ -1218,7 +1141,7 @@ int8_t parity_of_sets(position *rel1, position *rel2, const uint64_t n)
     }
 
     // indices go from 0 to (n - 1)
-    if (rel2[idx].i != rel2[idx].j || rel2[idx].i != (n - 1) - rel2[idx].j)
+    if (rel2[i] != i)
     {
       // will need to be transposed
       ret *= -1;
@@ -1229,4 +1152,110 @@ int8_t parity_of_sets(position *rel1, position *rel2, const uint64_t n)
   // putchar('\n');
 
   return ret;
+}
+
+void highlighted_square_init(highlighted_square *ret, const uint32_t n, const uint32_t d)
+{
+  ret->n = n;
+  ret->d = d;
+  ret->cols = calloc(ret->n, sizeof(*ret->cols));
+  ret->rows = calloc(ret->n, sizeof(*ret->rows));
+  if (ret->cols == NULL || ret->rows == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  ret->arr = calloc(ret->n * ret->n, sizeof(*ret->arr));
+  if (ret->arr == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+  return;
+}
+
+void highlighted_square_clear(highlighted_square *ret)
+{
+  free(ret->cols);
+  free(ret->rows);
+  free(ret->arr);
+  ret->n = 0;
+  ret->d = 0;
+  ret->cols = NULL;
+  ret->rows = NULL;
+  ret->arr = NULL;
+  return;
+}
+
+/*
+ * ret must be a non-NULL pointer to an inited highlighted_square
+ */
+void highlighted_square_from_pow_m_sqr(highlighted_square *ret, const pow_m_sqr *M, const uint32_t *rel1, const uint32_t *rel2)
+{
+  ret->n = M->n;
+  ret->d = M->d;
+
+  memcpy(ret->cols, M->cols, ret->n * sizeof(*ret->cols));
+  memcpy(ret->rows, M->rows, ret->n * sizeof(*ret->rows));
+
+  for (uint32_t i = 0; i < ret->n; ++i)
+  {
+    GET_AS_MAT(ret->arr, i, rel1[i], ret->n).colour = 1;
+    GET_AS_MAT(ret->arr, i, rel2[i], ret->n).colour = 2;
+    for (uint32_t j = 0; j < ret->n; ++j)
+      // this has to be GET_AS_MAT and NOT M_SQR_GET_AS_MAT because of rows and cols, the permutation would be all wrong
+      GET_AS_MAT(ret->arr, i, j, ret->n).val = GET_AS_MAT(M->arr, i, j, M->n);
+  }
+
+  return;
+}
+
+/*
+ * ret must be a non-NULL pointer to an inited pow_m_sqr
+ * sets the corresponding rels into rel1 and rel2
+ */
+void pow_m_sqr_from_highlighted_square(pow_m_sqr *ret, uint32_t *rel1, uint32_t *rel2, const highlighted_square *M)
+{
+  const uint32_t n = M->n;
+  ret->n = M->n;
+  ret->d = M->d;
+
+  memcpy(ret->cols, M->cols, ret->n * sizeof(*ret->cols));
+  memcpy(ret->rows, M->rows, ret->n * sizeof(*ret->rows));
+
+  memset(rel1, 0, n * sizeof(*rel1));
+  memset(rel2, 0, n * sizeof(*rel2));
+
+  for (uint32_t i = 0; i < ret->n; ++i)
+    for (uint32_t j = 0; j < ret->n; ++j)
+    {
+      // this has to be GET_AS_MAT and NOT M_SQR_GET_AS_MAT because of rows and cols, the permutation would be all wrong
+      GET_AS_MAT(ret->arr, i, j, ret->n) = GET_AS_MAT(M->arr, i, j, M->n).val;
+
+      // this on the other hand has to M_SQR_GET_AS_MAT as we want to use the permutation
+      if (M_SQR_GET_AS_MAT(*M, i, j).colour == 1)
+        rel1[i] = j;
+      if (M_SQR_GET_AS_MAT(*M, i, j).colour == 2)
+        rel2[i] = j;
+    }
+
+  return;
+}
+
+void rels_from_highlighted_square(uint32_t *rel1, uint32_t *rel2, const highlighted_square *M)
+{
+  const uint32_t n = M->n;
+  memset(rel1, 0, n * sizeof(*rel1));
+  memset(rel2, 0, n * sizeof(*rel2));
+  for (uint32_t i = 0; i < M->n; ++i)
+    for (uint32_t j = 0; j < M->n; ++j)
+    {
+      if (M_SQR_GET_AS_MAT(*M, i, j).colour == 1)
+        rel1[i] = j;
+      if (M_SQR_GET_AS_MAT(*M, i, j).colour == 2)
+        rel2[i] = j;
+    }
+
+  return;
 }

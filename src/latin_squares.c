@@ -2,22 +2,16 @@
 #include <stdlib.h>
 
 #include "latin_squares.h"
+#include "pow_m_sqr.h"
 
 void latin_square_init(latin_square *P, uint64_t n)
 {
   P->n = n;
   P->arr = calloc(n * n, sizeof(*(P->arr)));
-  P->cols = calloc(n, sizeof(*P->cols));
-  P->rows = calloc(n, sizeof(*P->rows));
-  if (P->arr == NULL || P->cols == NULL || P->rows == NULL)
+  if (P->arr == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
     exit(1);
-  }
-  for (uint64_t i = 0; i < n; ++i)
-  {
-    P->cols[i] = i;
-    P->rows[i] = i;
   }
   return;
 }
@@ -39,6 +33,6 @@ void standart_latin_square(latin_square P)
 {
   for (uint64_t i = 0; i < P.n; ++i)
     for (uint64_t j = 0; j < P.n; ++j)
-      M_SQR_GET_AS_MAT(P, i, j) = (j + i) % (P.n);
+      GET_AS_MAT(P.arr, i, j, P.n) = (j + i) % (P.n);
   return;
 }

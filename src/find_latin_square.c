@@ -13,7 +13,7 @@ typedef struct
   // bool inited;
 } state;
 
-#define LATIN_SQUARE_UNSET UINT64_MAX
+#define LATIN_SQUARE_UNSET UINT8_MAX
 
 void init_arrays(state *s);
 void free_arrays(state *s);
@@ -41,7 +41,7 @@ uint8_t iterate_over_all_square_callback(latin_square *P, latin_square_callback 
   // Fix first row: {0, 1, 2, ..., n - 1}
   for (uint64_t col = 0; col < P->n; col++)
   {
-    M_SQR_GET_AS_MAT(*P, 0, col) = col;
+    GET_AS_MAT(P->arr, 0, col, P->n) = col;
     s.usedInRow[0][col] = 1;
     s.usedInCol[col][col] = 1;
   }
@@ -59,7 +59,7 @@ uint8_t iterate_over_all_square_callback_inside(state *s, latin_square *P, uint6
   if (row == P->n)
     return (*callback)(P, data);
 
-  if (M_SQR_GET_AS_MAT(*P, row, col) != LATIN_SQUARE_UNSET)
+  if (GET_AS_MAT(P->arr, row, col, P->n) != LATIN_SQUARE_UNSET)
   {
     // Move to next cell
     if (col == P->n - 1)
@@ -72,7 +72,7 @@ uint8_t iterate_over_all_square_callback_inside(state *s, latin_square *P, uint6
   {
     if (!(s->usedInRow[row][num]) && !(s->usedInCol[col][num]))
     {
-      M_SQR_GET_AS_MAT(*P, row, col) = num;
+      GET_AS_MAT(P->arr, row, col, P->n) = num;
       s->usedInRow[row][num] = 1;
       s->usedInCol[col][num] = 1;
 
@@ -81,7 +81,7 @@ uint8_t iterate_over_all_square_callback_inside(state *s, latin_square *P, uint6
                                        : iterate_over_all_square_callback_inside(s, P, row, col + 1, callback, data);
 
       // Backtrack
-      M_SQR_GET_AS_MAT(*P, row, col) = LATIN_SQUARE_UNSET;
+      GET_AS_MAT(P->arr, row, col, P->n) = LATIN_SQUARE_UNSET;
       s->usedInRow[row][num] = 0;
       s->usedInCol[col][num] = 0;
 

@@ -10,7 +10,7 @@
 
 typedef struct
 {
-  mpz_t boards_tested;
+  mpz_t counter;
   timer time;
 } perf_counter;
 
@@ -28,7 +28,7 @@ void print_perfw(perf_counter perf, const char *const name)
 
   mpf_t speed;
   mpf_init(speed);
-  mpf_set_z(speed, perf.boards_tested);
+  mpf_set_z(speed, perf.counter);
   mpf_t time;
   mpf_init_set_d(time, timer_stop(&(perf.time)));
   mpf_div(speed, speed, time);
@@ -62,7 +62,7 @@ void printf_perf(perf_counter perf, const char *const name)
 
   mpf_t speed;
   mpf_init(speed);
-  mpf_set_z(speed, perf.boards_tested);
+  mpf_set_z(speed, perf.counter);
   mpf_t time;
   mpf_init_set_d(time, timer_stop(&(perf.time)));
   mpf_div(speed, speed, time);
