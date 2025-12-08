@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <time.h>
 
@@ -186,7 +187,7 @@ int find_disjoint_reps(Rep *reps, int total, int r, Rep *out)
 void print_result(uint64_t sum, Rep *reps, int r, int s)
 {
   printf("\nFound (%d, %d, 2)-taxicab number with globally disjoint terms:\n", r, s);
-  printf("Sum: %llu\n", sum);
+  printf("Sum: %"PRIu64"\n", sum);
   for (int i = 0; i < r; i++)
   {
     printf("  = ");
@@ -200,7 +201,7 @@ void print_result(uint64_t sum, Rep *reps, int r, int s)
   }
 }
 
-void cleanup()
+void cleanup(void)
 {
   for (int i = 0; i < HASH_SIZE; i++)
   {
@@ -279,7 +280,7 @@ void reps_to_taxicab(taxicab T, Rep *reps)
   for (uint64_t i = 0; i < T.r; ++i)
     for (uint64_t j = 0; j < T.s; ++j)
     {
-      // printf("%llu, %llu\n", i, j);
+      // printf("%"PRIu64", %"PRIu64"\n", i, j);
       TAXI_GET_AS_MAT(T, i, j) = reps[i].terms[j];
     }
 }
@@ -333,7 +334,7 @@ void find_taxicab(taxicab T)
   int *terms = malloc(sizeof(int) * T.s);
   Rep *result_reps = malloc(sizeof(Rep) * T.r);
   // uint64_t result_sum =
-  (void)find_terms(result_reps, terms, T.r, T.s);
+  (void) find_terms(result_reps, terms, T.r, T.s);
 
   reps_to_taxicab(T, result_reps);
 

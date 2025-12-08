@@ -1,15 +1,20 @@
 CC := gcc
 
-SRCDIR := ./src
-BINDIR := ./bin
+SRCDIR := src
+BINDIR := bin
 ODIR := $(SRCDIR)/obj
-IDIR := ./include ./nob
-LDIR := ./libs
+IDIR := include nob .
+LDIR := libs
 
-CCFLAGS := -Wall -Wextra -pedantic
+CCFLAGS := -Wall -Wextra -O0# -pedantic
 IFLAGS := $(addprefix -I, $(IDIR))
-LFLAGS := $(addprefix -L, $(LDIR)) -lgmp -lcurses
-CFLAGS := $(CCFLAGS) $(IFLAGS)
+ifeq ($(OS),Windows_NT)
+	LFLAGS += $(addprefix -L, $(LDIR))
+else
+	LFLAGS += -lm
+endif
+LFLAGS += -lgmp -lcurses
+CFLAGS := $(CCFLAGS) $(IFLAGS) -D__DEBUG__
 DBFLAGS := -ggdb -D__DEBUG__
 
 SRC := $(wildcard $(SRCDIR)/*.c)
@@ -28,7 +33,6 @@ run: $(TRGT) Makefile
 	./$<
 
 db: $(TRGT_DB) Makefile
-	gdb ./$<
 
 $(TRGT): $(OFILES) | $(BINDIR) $(ODIR)
 	$(CC) $^ -o $@ $(CFLAGS) $(LFLAGS)

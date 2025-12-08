@@ -1,8 +1,6 @@
 #ifndef __TIMER__
 #define __TIMER__
 
-#include <math.h>
-
 #ifndef __HELPER_BUFF_SIZE__
 #define __HELPER_BUFF_SIZE__ 64
 #endif
@@ -17,16 +15,24 @@ typedef struct timer_s
   LARGE_INTEGER start;
 } timer;
 
-void timer_start(timer *timer);
-double timer_stop(timer *timer);
 #else
-#error "timer is not (yet) defined for non windows systems (PRs are welcome ;))"
+
+#include <time.h>
+typedef struct timer_s
+{
+	double frequency;
+	double start;
+} timer;
+
 #endif
+
+void timer_start(timer *timer);
+// return time elapst in seconds
+double timer_stop(timer *timer);
 
 #endif // __TIMER__
 
 #ifdef __TIMER_IMPLEMENTATION__
-
 #ifdef _WIN32
 
 void timer_start(timer *timer)
@@ -45,8 +51,21 @@ double timer_stop(timer *timer)
   return interval;
 }
 
-#else /* _WIN32 */
-#error "timer is not (yet) defined for non windows systems (PRs are welcome ;))"
+#else 
+
+void timer_start(timer *timer)
+{
+	timer->frequency = CLOCKS_PER_SEC;
+	timer->start = clock();
+	return;
+}
+
+double timer_stop(timer *timer)
+{
+	double stop = clock();
+	return (stop - timer->start) / timer->frequency;
+}
+
 #endif
 
 #endif // __TIMER_IMPLEMENTATION__

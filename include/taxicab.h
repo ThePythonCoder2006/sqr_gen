@@ -33,4 +33,5 @@ void taxicab_printf(taxicab T);
 void taxicab_clear(taxicab *T);
 int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, perf_counter *perf, uint8_t setup);
 
-#endif
+#endif // __TAXICAB__
+

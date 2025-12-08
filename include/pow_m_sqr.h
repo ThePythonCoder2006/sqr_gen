@@ -1,14 +1,11 @@
 #ifndef __POW_M_SQR__
 #define __POW_M_SQR__
 
-#include <stdlib.h>
 #include <stdint.h>
 
 #include "perf_counter.h"
 #include "taxicab.h"
 #include "latin_squares.h"
-
-#include "gmp.h"
 
 typedef struct pow_m_sqr_s
 {
@@ -76,5 +73,7 @@ int8_t parity_of_sets(uint32_t *rel1, uint32_t *rel2, const uint64_t n);
 void latin_square_init(latin_square *P, uint64_t n);
 void latin_square_clear(latin_square *P);
 void standart_latin_square(latin_square P);
+void latin_square_printf(latin_square P);
 
 #endif // __POW_M_SQR__
+

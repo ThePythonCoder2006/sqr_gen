@@ -18,18 +18,19 @@
  */
 
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
 #include "find_sets.h"
 #include "pow_m_sqr.h"
+#include "arithmetic.h"
 
 #include "perf_counter.h"
 
 // forward declaration
-uint64_t ui_pow_ui(uint64_t x, uint64_t n);
-
 uint8_t find_sets_print_selection(uint8_t *selected, uint32_t n, void *_);
 uint8_t iterate_over_sets_callback_inside(sets_search_data *d, uint32_t current_row, uint32_t current_col, uint32_t count, set_callback f, void *data);
 
@@ -114,7 +115,9 @@ uint8_t iterate_over_sets_callback_inside(sets_search_data *d, uint32_t current_
    * - 2nd do not select the current cell and continue
    */
 
-  if (!GET_AS_MAT(d->selected, current_row, current_col, d->n) && d->sum_row[block_row] < d->r && d->sum_col[block_col] < d->s)
+  if (!GET_AS_MAT(d->selected, current_row, current_col, d->n)
+      && d->sum_row[block_row] < d->r
+      && d->sum_col[block_col] < d->s)
   {
     // add the current cell to the list and update counts
     GET_AS_MAT(d->selected, current_row, current_col, d->n) = 1;
@@ -135,7 +138,7 @@ uint8_t iterate_over_sets_callback_inside(sets_search_data *d, uint32_t current_
 
 // ----------- collision method ---------------
 
-#define HSHTBL_SIZE 10003 // big prime number
+#define HSHTBL_SIZE 17 // big prime number
 
 typedef struct hshtbl_node_s
 {
@@ -147,7 +150,7 @@ typedef struct hshtbl_node_s
 typedef struct
 {
   size_t count;
-  hshtbl_node *arr[HSHTBL_SIZE];
+  hshtbl_node *arr[HSHTBL_SIZE]; // https://cdecl.org/?q=char+*x%5B2%5D
 } hshtbl;
 
 /*
@@ -224,7 +227,7 @@ uint8_t sets_equal_items_selected(const uint32_t *set1_items, const uint8_t *set
  */
 void hshtbl_insert(hshtbl *table, const uint32_t *items, const uint8_t *selected, const uint32_t count, const uint64_t sum, const uint64_t n)
 {
-  uint64_t h = hash_func(sum);
+  uint64_t h = hash_func(sum) % HSHTBL_SIZE;
 
   hshtbl_node *node = table->arr[h];
   while (node)
@@ -328,6 +331,8 @@ void free_state(state pack, const uint32_t r, const uint32_t s)
 
   free_hshtbls(pack.tables, r * s);
   free_hshtbl(*pack.found);
+
+  free(pack.found);
 
   mpz_clear(pack.perf.counter);
   (void)timer_stop(&pack.perf.time);
@@ -467,13 +472,14 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
     exit(1);
   }
 
+  uint32_t *items = calloc(n, sizeof(*node->items));
   uint8_t retval = NOT_FOUND;
   // found a least match if there are no repeated entries and the union respects the sum conditions
   do
   {
     if (node->sum + sum != pack->mu)
     {
-      // printf("%llu != %llu\n", node->sum + sum, pack->mu);
+      // printf("%"PRIu64" != %"PRIu64"\n", node->sum + sum, pack->mu);
       continue;
     }
 
@@ -488,7 +494,7 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
     for (uint32_t i = 0; i < n - count; ++i)
       pack->selected[node->items[i]] = 1;
 
-    uint32_t *items = calloc(n, sizeof(*node->items));
+    memset(items, 0, n * sizeof(*node->items));
     for (uint32_t k = 0, idx = 0; k < count && idx < n * n; ++idx)
     {
       if (pack->selected[idx])
@@ -502,7 +508,10 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
       retval = COLLISION_FOUND;
       mpz_add_ui(pack->perf.counter, pack->perf.counter, 1); // add to number of found sets
       if (!(*f)(pack->selected, n, data))
-        return SIGSTOP;
+      {
+        retval = SIGSTOP;
+        goto ret;
+      }
       hshtbl_insert(pack->found, items, pack->selected, n, set_items_sqared_sum(items, n), n);
     }
 
@@ -512,6 +521,10 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
       pack->selected[node->items[i]] = 0;
   } while ((node = node->next) != NULL);
 
+ret:
+  free(row_sum_copy);
+  free(col_sum_copy);
+  free(items);
   return retval;
 }
 
@@ -526,11 +539,11 @@ uint8_t set_has_magic_sum(const uint8_t *selected, const pow_m_sqr M)
     for (uint32_t j = 0; j < M.n; ++j)
       if (GET_AS_MAT(selected, i, j, M.n))
       {
-        printf("%llu^%u + ", M_SQR_GET_AS_MAT(M, i, j), M.d);
+        // printf("%"PRIu64"^%u + ", M_SQR_GET_AS_MAT(M, i, j), M.d);
         acc += ui_pow_ui(M_SQR_GET_AS_MAT(M, i, j), M.d);
       }
 
-  printf(" = %llu != %llu\n", acc, mu);
+  //printf(" = %"PRIu64" != %"PRIu64"\n", acc, mu);
 
   return mu == acc;
 }
@@ -552,6 +565,7 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
 
   int8_t retval = NOT_FOUND;
 
+  /*
   uint32_t test_entries1[] = {0x08, 0x17, 0x39, 0x3E,
                               0x64, 0x53, 0x77, 0x48,
                               0x8F, 0xBE, 0xA3, 0xB1,
@@ -561,10 +575,11 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
                               0x7B, 0x68, 0x60, 0x73,
                               0x96, 0xB7, 0xAD, 0x84,
                               0xD8, 0xCD, 0xDC, 0xF0};
+                              */
 
   while (count < n)
   {
-#if 0
+#if 1
     int32_t selected_bloc = select_open_bloc(pack->selected, pack->col_sum, pack->row_sum, pack->open_blocs, r, s);
     if (selected_bloc < 0)
       // no valid blocs: abort with current search status (either NOT_FOUND or COLLISION_FOUND)
@@ -578,27 +593,33 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
 
     // get one entry from the list we selected
     uint32_t selected_entry = select_open_entry_in_bloc(pack->selected, pack->open_entries_in_bloc, selected_bi, selected_bj, r, s);
-#endif
+#else
+
     uint32_t selected_entry = 1;
-    printf("%llu.\t", pack->found->count);
+    // printf("%"PRIu64".\t", pack->found->count);
     if (pack->found->count == 0)
       selected_entry = test_entries1[count];
     else if (pack->found->count == 1)
       selected_entry = test_entries2[count];
     else
-      fprintf(stderr, "What ??? found.count = %llu\n", pack->found->count);
-    printf("%u: %llu\n", selected_entry, M_SQR_GET_AS_VEC(M, selected_entry));
+      fprintf(stderr, "What ??? found.count = %"PRIu64"\n", pack->found->count);
+
+    // printf("%u: %"PRIu64"\n", selected_entry, M_SQR_GET_AS_VEC(M, selected_entry));
+#endif
 
     pack->selected[selected_entry] = 1;
     pack->items[count++] = selected_entry;
 
     sum += ui_pow_ui(M_SQR_GET_AS_VEC(M, selected_entry), M.d);
 
+    if (sum > pack->mu)
+      return NOT_FOUND;
+
     // printf("%u\n", count);
     if (count >= n)
       break; // we found a solution, dont insert nor check for collisions
 
-    hshtbl_insert(&(pack->tables[count - 1]), pack->items, pack->selected, count, sum, n); // -1 because hshtbl is zero indexed
+    hshtbl_insert(&(pack->tables[count - 1]), pack->items, pack->selected, count, sum, n); // -1 because pack->tables is zero indexed
 
     int8_t ret = check_if_set_can_be_formed_from_collision(pack, sum, r, s, count, f, data);
     if (ret > 0)
@@ -640,7 +661,7 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
   return retval;
 }
 
-#define MAX_ALLOWED_TRIES 1
+#define MAX_ALLOWED_TRIES (10 * 1024)
 
 void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
 {
@@ -690,22 +711,38 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
       clear();
       move(0, 0);
       for (uint32_t i = 0; i < (n - 1); ++i)
-        printw("%llu, ", pack.tables[i].count);
+        printw("%"PRIu64", ", pack.tables[i].count);
       addch('\n');
 
       char buff[256] = {0};
-      gmp_snprintf(buff, 255, "%7llu, %Zu", tries, pack.perf.counter);
+      gmp_snprintf(buff, 255, "%7"PRIu64", %Zu", tries, pack.perf.counter);
       printw("%s\n", buff);
       print_perfw(pack.perf, "sets");
       refresh();
     }
 #else
-    // gmp_printf("\r%5llu, %Zu", tries, pack.perf.boards_tested);
+    if (refresh_frames == 0)
+    {
+      size_t acc = 0;
+      for (size_t i = 0; i < (n - 1); ++i)
+        acc += pack.tables[i].count;
+
+      printf("\rtot_count = %e", (double)acc);
+      // printf("\rh_0_count = %zu", pack.tables[0].count);
+
+      if (acc >= 10 * 1000 * 1000)
+      {
+        putchar('\n');
+        ret = -1;
+      }
+    }
+    // gmp_printf("\r%5"PRIu64", %Zu", tries, pack.perf.boards_tested);
     // fflush(stdout);
 #endif
     ++refresh_frames;
   } while (ret >= 0);
 
   free_state(pack, r, s);
+  free(prev_counts);
   return;
 }

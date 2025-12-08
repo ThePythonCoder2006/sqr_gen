@@ -6,26 +6,9 @@
 #define __TIMER_IMPLEMENTATION__
 #include "timer.h"
 #include "perf_counter.h"
+#include "arithmetic.h"
 
 #include "gmp.h"
-#include "curses.h"
-
-/*
- * return x^n
- */
-uint64_t ui_pow_ui(uint64_t x, uint64_t n)
-{
-  uint64_t acc = 1;
-  uint64_t a = x;
-  while (n)
-  {
-    if (n & 0x1)
-      acc *= a;
-    a *= a;
-    n >>= 1;
-  }
-  return acc;
-}
 
 uint64_t taxicab_sum_row(taxicab T, uint64_t i)
 {
@@ -96,6 +79,8 @@ uint8_t is_taxicab(taxicab T)
 uint8_t taxicab_cross_products_are_distinct(taxicab a, taxicab b)
 {
   assert(a.r == b.s && a.s == b.r);
+  
+  int retval = 1;
 
   uint64_t m = 0;
   for (uint32_t i = 0; i < a.r; ++i)
@@ -121,12 +106,16 @@ uint8_t taxicab_cross_products_are_distinct(taxicab a, taxicab b)
         {
           // printf("%llu\n", TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v));
           if (counts[TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v)] > 0)
-            return 0;
+          {
+            retval = 0;
+            goto ret;
+          }
           counts[TAXI_GET_AS_MAT(a, i, j) * TAXI_GET_AS_MAT(b, u, v)] = 1;
         }
 
+ret:
   free(counts);
-  return 1;
+  return retval;
 }
 
 // uint8_t is_pow_m_sqr(pow_m_sqr M)

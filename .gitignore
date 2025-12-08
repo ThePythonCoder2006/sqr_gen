@@ -54,3 +54,9 @@ dkms.conf
 .vscode/*
 raylib
 raylib/*
+
+.cache/*
+
+# vim files
+*~
+compile_commands.json

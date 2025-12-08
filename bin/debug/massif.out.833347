@@ -1,0 +1,899 @@
+desc: (none)
+cmd: ./bin/main_db.exe
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=604616825
+mem_heap_B=1464
+mem_heap_extra_B=80
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=994131132
+mem_heap_B=6036364
+mem_heap_extra_B=5049308
+mem_stacks_B=0
+heap_tree=detailed
+n3: 6036364 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 3939768 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 3939768 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 3939768 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 3939768 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 3939768 0x400A306: main (main.c:175)
+ n1: 2094056 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 2094056 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 2094056 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 2094056 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 2094056 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=3
+#-----------
+time=1654666157
+mem_heap_B=16279260
+mem_heap_extra_B=13621772
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=2389497976
+mem_heap_B=27669540
+mem_heap_extra_B=23150660
+mem_stacks_B=0
+heap_tree=detailed
+n3: 27669540 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 18064440 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 18064440 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 18064440 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 18064440 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 18064440 0x400A306: main (main.c:175)
+ n1: 9602560 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 9602560 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 9602560 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 9602560 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 9602560 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=5
+#-----------
+time=3041355679
+mem_heap_B=37778540
+mem_heap_extra_B=31611044
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=3532399030
+mem_heap_B=45391112
+mem_heap_extra_B=37980464
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=3959575821
+mem_heap_B=52013528
+mem_heap_extra_B=43521920
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=4504850237
+mem_heap_B=60463640
+mem_heap_extra_B=50591536
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=4996920844
+mem_heap_B=68091860
+mem_heap_extra_B=56975012
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=10
+#-----------
+time=5758585527
+mem_heap_B=79896044
+mem_heap_extra_B=66851100
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=6415177665
+mem_heap_B=90082840
+mem_heap_extra_B=75378176
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=6741347447
+mem_heap_B=95140436
+mem_heap_extra_B=79610564
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=7358995723
+mem_heap_B=104716316
+mem_heap_extra_B=87622908
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=14
+#-----------
+time=7935795207
+mem_heap_B=113666912
+mem_heap_extra_B=95116376
+mem_stacks_B=0
+heap_tree=detailed
+n3: 113666912 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 74217528 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 74217528 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 74217528 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 74217528 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 74217528 0x400A306: main (main.c:175)
+ n1: 39446844 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 39446844 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 39446844 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 39446844 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 39446844 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=15
+#-----------
+time=8738478204
+mem_heap_B=126117784
+mem_heap_extra_B=105537536
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=9424215723
+mem_heap_B=136747844
+mem_heap_extra_B=114431108
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=9864181504
+mem_heap_B=143568172
+mem_heap_extra_B=120137868
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=10584675806
+mem_heap_B=154738636
+mem_heap_extra_B=129484812
+mem_stacks_B=0
+heap_tree=detailed
+n3: 154738636 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 101035128 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 101035128 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 101035128 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 101035128 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 101035128 0x400A306: main (main.c:175)
+ n1: 53700968 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 53700968 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 53700968 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 53700968 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 53700968 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=19
+#-----------
+time=11411721987
+mem_heap_B=167560320
+mem_heap_extra_B=140213224
+mem_stacks_B=0
+heap_tree=detailed
+n3: 167560320 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 109406712 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 109406712 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 109406712 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 109406712 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 109406712 0x400A306: main (main.c:175)
+ n1: 58151068 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 58151068 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 58151068 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 58151068 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 58151068 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=20
+#-----------
+time=11850758715
+mem_heap_B=174364644
+mem_heap_extra_B=145905860
+mem_stacks_B=0
+heap_tree=detailed
+n3: 174364644 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 113848992 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 113848992 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 113848992 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 113848992 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 113848992 0x400A306: main (main.c:175)
+ n1: 60513112 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 60513112 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 60513112 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 60513112 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 60513112 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=21
+#-----------
+time=12307152404
+mem_heap_B=181443584
+mem_heap_extra_B=151831384
+mem_stacks_B=0
+heap_tree=detailed
+n3: 181443584 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 118471992 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 118471992 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 118471992 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 118471992 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 118471992 0x400A306: main (main.c:175)
+ n1: 62969052 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 62969052 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 62969052 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 62969052 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 62969052 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=22
+#-----------
+time=12778393569
+mem_heap_B=188753532
+mem_heap_extra_B=157950828
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=13267650347
+mem_heap_B=196345648
+mem_heap_extra_B=164306440
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=14055931611
+mem_heap_B=208563144
+mem_heap_extra_B=174528224
+mem_stacks_B=0
+heap_tree=detailed
+n3: 208563144 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 136180968 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 136180968 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 136180968 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 136180968 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 136180968 0x400A306: main (main.c:175)
+ n1: 72379636 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 72379636 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 72379636 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 72379636 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 72379636 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=25
+#-----------
+time=14602197352
+mem_heap_B=217032052
+mem_heap_extra_B=181614484
+mem_stacks_B=0
+heap_tree=detailed
+n3: 217032052 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 141710472 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 141710472 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 141710472 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 141710472 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 141710472 0x400A306: main (main.c:175)
+ n1: 75319040 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 75319040 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 75319040 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 75319040 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 75319040 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=26
+#-----------
+time=15170327940
+mem_heap_B=225843704
+mem_heap_extra_B=188989600
+mem_stacks_B=0
+heap_tree=detailed
+n3: 225843704 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 147464688 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 147464688 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 147464688 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 147464688 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 147464688 0x400A306: main (main.c:175)
+ n1: 78376476 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 78376476 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 78376476 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 78376476 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 78376476 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=27
+#-----------
+time=15761671800
+mem_heap_B=235013820
+mem_heap_extra_B=196663580
+mem_stacks_B=0
+heap_tree=detailed
+n3: 235013820 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 153452496 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 153452496 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 153452496 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 153452496 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 153452496 0x400A306: main (main.c:175)
+ n1: 81558784 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 81558784 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 81558784 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 81558784 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 81558784 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=28
+#-----------
+time=16377027136
+mem_heap_B=244556036
+mem_heap_extra_B=204649348
+mem_stacks_B=0
+heap_tree=detailed
+n3: 244556036 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 159683472 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 159683472 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 159683472 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 159683472 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 159683472 0x400A306: main (main.c:175)
+ n1: 84870024 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 84870024 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 84870024 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 84870024 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 84870024 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=29
+#-----------
+time=17009286280
+mem_heap_B=254365220
+mem_heap_extra_B=212860100
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=17669404220
+mem_heap_B=264595308
+mem_heap_extra_B=221418988
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=18355842605
+mem_heap_B=275237336
+mem_heap_extra_B=230325120
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=32
+#-----------
+time=19099250316
+mem_heap_B=286761472
+mem_heap_extra_B=239967752
+mem_stacks_B=0
+heap_tree=detailed
+n3: 286761472 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 187241664 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 187241664 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 187241664 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 187241664 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 187241664 0x400A306: main (main.c:175)
+ n1: 99517268 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 99517268 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 99517268 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 99517268 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 99517268 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=33
+#-----------
+time=19850388098
+mem_heap_B=298405516
+mem_heap_extra_B=249711180
+mem_stacks_B=0
+heap_tree=detailed
+n3: 298405516 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 194844432 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 194844432 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 194844432 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 194844432 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 194844432 0x400A306: main (main.c:175)
+ n1: 103558544 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 103558544 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 103558544 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 103558544 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 103558544 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=34
+#-----------
+time=20632198095
+mem_heap_B=310522760
+mem_heap_extra_B=259849808
+mem_stacks_B=0
+heap_tree=detailed
+n3: 310522760 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 202755792 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 202755792 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 202755792 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 202755792 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 202755792 0x400A306: main (main.c:175)
+ n1: 107764428 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 107764428 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 107764428 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 107764428 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 107764428 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=35
+#-----------
+time=21444964587
+mem_heap_B=323130128
+mem_heap_extra_B=270402024
+mem_stacks_B=0
+heap_tree=detailed
+n3: 323130128 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 210988824 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 210988824 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 210988824 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 210988824 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 210988824 0x400A306: main (main.c:175)
+ n1: 112138764 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 112138764 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 112138764 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 112138764 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 112138764 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=36
+#-----------
+time=22290757878
+mem_heap_B=336249408
+mem_heap_extra_B=281382632
+mem_stacks_B=0
+heap_tree=detailed
+n3: 336249408 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 219556128 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 219556128 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 219556128 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 219556128 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 219556128 0x400A306: main (main.c:175)
+ n1: 116690740 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 116690740 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 116690740 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 116690740 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 116690740 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=37
+#-----------
+time=23171019061
+mem_heap_B=349901968
+mem_heap_extra_B=292808584
+mem_stacks_B=0
+heap_tree=detailed
+n3: 349901968 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 228471192 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 228471192 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 228471192 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 228471192 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 228471192 0x400A306: main (main.c:175)
+ n1: 121428236 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 121428236 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 121428236 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 121428236 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 121428236 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=38
+#-----------
+time=23624061896
+mem_heap_B=356933496
+mem_heap_extra_B=298695632
+mem_stacks_B=0
+heap_tree=detailed
+n3: 356933496 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 233063832 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 233063832 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 233063832 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 233063832 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 233063832 0x400A306: main (main.c:175)
+ n1: 123867124 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 123867124 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 123867124 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 123867124 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 123867124 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=39
+#-----------
+time=24086957047
+mem_heap_B=364108376
+mem_heap_extra_B=304698976
+mem_stacks_B=0
+heap_tree=detailed
+n3: 364108376 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 237748368 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 237748368 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 237748368 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 237748368 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 237748368 0x400A306: main (main.c:175)
+ n1: 126357468 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 126357468 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 126357468 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 126357468 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 126357468 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=40
+#-----------
+time=24558693554
+mem_heap_B=371426232
+mem_heap_extra_B=310824288
+mem_stacks_B=0
+heap_tree=detailed
+n3: 371426232 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 242527344 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 242527344 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 242527344 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 242527344 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 242527344 0x400A306: main (main.c:175)
+ n1: 128896348 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 128896348 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 128896348 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 128896348 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 128896348 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=41
+#-----------
+time=25040146182
+mem_heap_B=378891996
+mem_heap_extra_B=317071852
+mem_stacks_B=0
+heap_tree=detailed
+n3: 378891996 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 247402200 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 247402200 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 247402200 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 247402200 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 247402200 0x400A306: main (main.c:175)
+ n1: 131487256 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 131487256 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 131487256 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 131487256 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 131487256 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=42
+#-----------
+time=25531365820
+mem_heap_B=386508200
+mem_heap_extra_B=323444608
+mem_stacks_B=0
+heap_tree=detailed
+n3: 386508200 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 252374976 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 252374976 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 252374976 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 252374976 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 252374976 0x400A306: main (main.c:175)
+ n1: 134130684 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 134130684 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 134130684 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 134130684 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 134130684 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=43
+#-----------
+time=26032519047
+mem_heap_B=394277280
+mem_heap_extra_B=329945624
+mem_stacks_B=0
+heap_tree=detailed
+n3: 394277280 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 257447640 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 257447640 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 257447640 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 257447640 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 257447640 0x400A306: main (main.c:175)
+ n1: 136827100 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 136827100 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 136827100 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 136827100 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 136827100 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=44
+#-----------
+time=26543509366
+mem_heap_B=402201888
+mem_heap_extra_B=336578072
+mem_stacks_B=0
+heap_tree=detailed
+n3: 402201888 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 262622496 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 262622496 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 262622496 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 262622496 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 262622496 0x400A306: main (main.c:175)
+ n1: 139576852 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 139576852 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 139576852 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 139576852 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 139576852 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=45
+#-----------
+time=27064890182
+mem_heap_B=410286172
+mem_heap_extra_B=343343308
+mem_stacks_B=0
+heap_tree=detailed
+n3: 410286172 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 267901248 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 267901248 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 267901248 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 267901248 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 267901248 0x400A306: main (main.c:175)
+ n1: 142382384 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 142382384 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 142382384 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 142382384 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 142382384 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=46
+#-----------
+time=27596641495
+mem_heap_B=418532512
+mem_heap_extra_B=350245000
+mem_stacks_B=0
+heap_tree=detailed
+n3: 418532512 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 273286176 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 273286176 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 273286176 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 273286176 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 273286176 0x400A306: main (main.c:175)
+ n1: 145243796 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 145243796 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 145243796 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 145243796 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 145243796 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=47
+#-----------
+time=28135239935
+mem_heap_B=426889352
+mem_heap_extra_B=357240528
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=28682885287
+mem_heap_B=435383948
+mem_heap_extra_B=364350732
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=29256535848
+mem_heap_B=444278564
+mem_heap_extra_B=371794468
+mem_stacks_B=0
+heap_tree=detailed
+n3: 444278564 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 290099256 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 290099256 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 290099256 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 290099256 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 290099256 0x400A306: main (main.c:175)
+ n1: 154176768 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 154176768 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 154176768 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 154176768 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 154176768 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=50
+#-----------
+time=29543059556
+mem_heap_B=448721472
+mem_heap_extra_B=375512296
+mem_stacks_B=0
+heap_tree=detailed
+n3: 448721472 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 293000280 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 293000280 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 293000280 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 293000280 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 293000280 0x400A306: main (main.c:175)
+ n1: 155718652 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 155718652 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 155718652 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 155718652 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 155718652 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=51
+#-----------
+time=29832319016
+mem_heap_B=453208188
+mem_heap_extra_B=379267932
+mem_stacks_B=0
+heap_tree=detailed
+n3: 453208188 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 295930392 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 295930392 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 295930392 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 295930392 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 295930392 0x400A306: main (main.c:175)
+ n1: 157275256 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 157275256 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 157275256 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 157275256 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 157275256 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=52
+#-----------
+time=30124805737
+mem_heap_B=457740696
+mem_heap_extra_B=383060224
+mem_stacks_B=0
+heap_tree=detailed
+n3: 457740696 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 298889616 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 298889616 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 298889616 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 298889616 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 298889616 0x400A306: main (main.c:175)
+ n1: 158848540 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 158848540 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 158848540 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 158848540 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 158848540 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=53
+#-----------
+time=30419829673
+mem_heap_B=462317676
+mem_heap_extra_B=386891260
+mem_stacks_B=0
+heap_tree=detailed
+n3: 462317676 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 301878624 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 301878624 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 301878624 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 301878624 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 301878624 0x400A306: main (main.c:175)
+ n1: 160436512 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 160436512 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 160436512 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 160436512 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 160436512 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=54
+#-----------
+time=30717877400
+mem_heap_B=466940340
+mem_heap_extra_B=390760740
+mem_stacks_B=0
+heap_tree=detailed
+n3: 466940340 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 304897512 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 304897512 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 304897512 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 304897512 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 304897512 0x400A306: main (main.c:175)
+ n1: 162040288 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 162040288 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 162040288 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 162040288 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 162040288 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=55
+#-----------
+time=31019236178
+mem_heap_B=471610232
+mem_heap_extra_B=394667936
+mem_stacks_B=0
+heap_tree=detailed
+n3: 471610232 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 307946400 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 307946400 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 307946400 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 307946400 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 307946400 0x400A306: main (main.c:175)
+ n1: 163661292 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 163661292 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 163661292 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 163661292 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 163661292 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=56
+#-----------
+time=31323140117
+mem_heap_B=476325584
+mem_heap_extra_B=398615368
+mem_stacks_B=0
+heap_tree=detailed
+n3: 476325584 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 311026032 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 311026032 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 311026032 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 311026032 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 311026032 0x400A306: main (main.c:175)
+ n1: 165297012 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 165297012 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 165297012 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 165297012 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 165297012 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=57
+#-----------
+time=31630249930
+mem_heap_B=481088816
+mem_heap_extra_B=402601560
+mem_stacks_B=0
+heap_tree=peak
+n3: 481088816 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 314136360 0x4003481: hshtbl_insert (find_sets.c:238)
+  n1: 314136360 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 314136360 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 314136360 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 314136360 0x400A306: main (main.c:175)
+ n1: 166949916 0x40034D1: hshtbl_insert (find_sets.c:245)
+  n1: 166949916 0x4004593: generate_random_set_with_magic_sum (find_sets.c:617)
+   n1: 166949916 0x4004966: find_sets_collision_method (find_sets.c:678)
+    n1: 166949916 0x400FEBC: search_pow_m_sqr_from_taxicabs (taxicab_method.c:202)
+     n0: 166949916 0x400A306: main (main.c:175)
+ n0: 2540 in 32 places, all below massif's threshold (1.00%)
