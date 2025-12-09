@@ -105,9 +105,9 @@ uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data)
   clear();
   move(0, 0);
   char buff[256] = {0};
-  gmp_snprintf(buff, 255, "%Zu arrays of taxicabs tested so far", pack->perf.counter);
+  gmp_snprintf(buff, 255, "%Zu arrays of latin squares tested so far", pack->perf.counter);
   printw("%s\n", buff);
-  print_perfw(pack->perf, "arrays of taxicabs");
+  print_perfw(pack->perf, "arrays of latin squares");
   refresh();
 #endif
   mpz_add_ui(pack->perf.counter, pack->perf.counter, 1);

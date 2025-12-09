@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 #include "pow_m_sqr.h"
@@ -14,6 +13,7 @@
 #include "probas.h"
 #include "latin_squares.h"
 #include "find_taxicab.h"
+#include "permut.h"
 
 #define __PERF_COUNTER_IMPLEMENTATION__
 #include "perf_counter.h"
@@ -31,7 +31,7 @@ int main(int argc, char **argv)
   // srand(69);
 
   taxicab a = {0};
-  taxicab_init(&a, 4, 4, 2);
+  taxicab_init(&a, 3, 2, 2);
   find_taxicab(a);
 
 #if 0

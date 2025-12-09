@@ -14,7 +14,7 @@ else
 	LFLAGS += -lm
 endif
 LFLAGS += -lgmp -lcurses
-CFLAGS := $(CCFLAGS) $(IFLAGS) -D__DEBUG__
+CFLAGS := $(CCFLAGS) $(IFLAGS)# -D__DEBUG__
 DBFLAGS := -ggdb -D__DEBUG__
 
 SRC := $(wildcard $(SRCDIR)/*.c)
