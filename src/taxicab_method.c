@@ -1,3 +1,4 @@
+#include "curses.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -239,7 +240,15 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
     latin_square_init(&(Q[i]), a.r);
 
   da_sets mark = {.n = M.n};
-  printf("was%s able to find compatible latin square from the found sets\n", !find_set_compatible_latin_squares_array(P, Q, &M, a.r, a.s, rels, mark) ? "" : " not");
+  int res = !find_set_compatible_latin_squares_array(P, Q, &M, a.r, a.s, rels, mark);
+#ifndef __DEBUG__
+  clear();
+  move(0, 0);
+  printw("was%s able to find compatible latin square from the found sets\n", res ? "" : " not");
+  refresh();
+#else
+  printf("was%s able to find compatible latin square from the found sets\n", res ? "" : " not");
+#endif
 
   da_free(rels);
 

@@ -5,7 +5,7 @@
 #include "pow_m_sqr.h"
 
 #ifndef REQUIERED_SETS
-  #define REQUIERED_SETS 32
+  #define REQUIERED_SETS 128
 #endif
 
 void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b);

@@ -6,7 +6,7 @@ ODIR := $(SRCDIR)/obj
 IDIR := include nob .
 LDIR := libs
 
-CCFLAGS := -Wall -Wextra -O0# -pedantic
+CCFLAGS := -Wall -Wextra -O3# -pedantic
 IFLAGS := $(addprefix -I, $(IDIR))
 ifeq ($(OS),Windows_NT)
 	LFLAGS += $(addprefix -L, $(LDIR))

@@ -27,11 +27,11 @@ uint8_t print_latin_square_array(latin_square *P, uint64_t len, void *_);
 int main(int argc, char **argv)
 {
   (void)argc, (void)argv;
-  srand(time(NULL));
-  // srand(69);
+  // srand(time(NULL));
+  srand(69);
 
   taxicab a = {0};
-  taxicab_init(&a, 3, 2, 2);
+  taxicab_init(&a, 3, 3, 2);
   find_taxicab(a);
 
 #if 0
