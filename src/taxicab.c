@@ -275,7 +275,7 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     clear();
 
     printw("average speed = ");
-    print_perfw(*perf, "taxicabs");
+    print_perfw(perf, "taxicabs");
     mvtaxicab_print(1, 0, T);
     char buff[256] = {0};
     gmp_snprintf(buff, 255, "%Zu taxicabs have been rejected so far", perf->counter);

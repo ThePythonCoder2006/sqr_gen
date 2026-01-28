@@ -365,7 +365,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     clear();
 
     printw("average speed = ");
-    print_perfw(*perf, "grids");
+    print_perfw(perf, "grids");
     mvpow_m_sqr_printw(1, 0, base);
     char buff[256] = {0};
     gmp_snprintf(buff, 255, "%Zu boards have been rejected so far", perf->counter);

@@ -169,19 +169,23 @@ void init_hshtbl(hshtbl* h)
   h->capacity = HSHTBL_BASE_SIZE;
 }
 
+#define PREFILL_CAP 1
+
 /*
- * returns an array of n - 1 hshtbls as there is no need for a hshtbl for sets n entries long
+ * returns an array of n - 1 - PREFILL_CAP hshtbls. Why only n-1-PREFILL_CAP:
+ *  - there is no need for a hshtbl for sets n entries long
+ *  - there is no need to store partial rels of more than n-PREFILL_CAP entries, as there is no way to find any new PREFILL_CAP element long rels, checking for collisions is enough
  * hshtbl with index k will hold set of postions with k + 1 entries
  */
 hshtbl *init_hshtbls(const uint32_t n)
 {
-  hshtbl *table = calloc(n - 1, sizeof(hshtbl));
+  hshtbl *table = calloc(n - 1 - PREFILL_CAP, sizeof(hshtbl));
   if (table == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
     exit(1);
   }
-  for (uint32_t i = 0; i < n - 1; ++i)
+  for (uint32_t i = 0; i < n - 1 - PREFILL_CAP; ++i)
     init_hshtbl(table + i);
   return table;
 }
@@ -198,7 +202,7 @@ void free_hshtbl(hshtbl *table)
 
 void free_hshtbls(hshtbl *table, const uint32_t n)
 {
-  for (uint32_t k = 0; k < n - 1; ++k)
+  for (uint32_t k = 0; k < n - 1 - PREFILL_CAP; ++k)
     free_hshtbl(table + k);
 
   free(table);
@@ -354,6 +358,7 @@ void init_state(state *pack, const uint32_t r, const uint32_t s)
   mpz_init_set_ui(pack->perf.counter, 0);
   mpf_init_set_ui(pack->perf.time_, 0);
   mpf_init_set_ui(pack->perf.speed, 0);
+  mpf_init_set_ui(pack->perf.peak_speed, 0);
 
   return;
 }
@@ -520,6 +525,10 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
 {
   const uint32_t n = r * s;
 
+  // do not do collisions on lower sizes, as we do not store the sets
+  if (count <= PREFILL_CAP)
+    return NOT_FOUND;
+
   hshtbl *table = pack->tables + (n - count - 1);
   uint32_t h = hash_func(pack->mu - sum) % table->capacity;
   hshtbl_node node = table->arr[h];
@@ -676,7 +685,11 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
     if (count >= n)
       break; // we found a solution, dont insert nor check for collisions
 
-    hshtbl_insert(&(pack->tables[count - 1]), pack->items, pack->selected, count, sum, n); // -1 because pack->tables is zero indexed
+    /*
+     * do not insert partial rels which are n-1 elements long, as there is no way to find any new 1 element long rels, checking for collisions is enough
+     */
+    if (count < n - 1)
+      hshtbl_insert(&(pack->tables[count - 1]), pack->items, pack->selected, count, sum, n); // -1 because pack->tables is zero indexed
 
     int8_t ret = check_if_set_can_be_formed_from_collision(pack, sum, r, s, count, f, data);
     if (ret > 0)
@@ -749,8 +762,8 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
       tries = 0;
 
     uint8_t changed = 0;
-    uint64_t tables_tot_count = 0;
-    for (uint32_t k = 0; k < (n - 1); ++k)
+    uint64_t tables_tot_count = 0, tables_tot_capa = 0;
+    for (uint32_t k = 0; k < (n - 1 - PREFILL_CAP); ++k)
     {
       /*
        * check if we changed, then update the counts hence we cannot break
@@ -760,6 +773,7 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
         changed = 1;
       prev_counts[k] = c;
       tables_tot_count += c;
+      tables_tot_capa += pack.tables[k].capacity;
     }
 
     if (changed)
@@ -776,19 +790,19 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
     {
       clear();
       move(0, 0);
-      for (uint32_t i = 0; i < (n - 1); ++i)
+      for (uint32_t i = 0; i < (n - 1 - PREFILL_CAP); ++i)
       {
         printw("%7"PRIu64"/%7"PRIu64", ", pack.tables[i].count, pack.tables[i].capacity);
         if (i == (n - 1) / 2)
           addch('\n');
       }
       addch('\n');
-      printw("tot: %"PRIu64"\n", tables_tot_count);
+      printw("tot: %"PRIu64"/ %"PRIu64": %.2f%%\n", tables_tot_count, tables_tot_capa, 100.0 * (double) tables_tot_count / (double) tables_tot_capa);
 
       char buff[256] = {0};
       gmp_snprintf(buff, 255, "%7"PRIu64", %Zu", tries, pack.perf.counter);
       printw("%s\n", buff);
-      print_perfw(pack.perf, "sets");
+      print_perfw(&pack.perf, "sets");
       refresh();
     }
 #else

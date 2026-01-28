@@ -111,7 +111,7 @@ uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data)
   char buff[256] = {0};
   gmp_snprintf(buff, 255, "%Zu arrays of latin squares tested so far", pack->perf.counter);
   printw("%s\n", buff);
-  print_perfw(pack->perf, "arrays of latin squares");
+  print_perfw(&pack->perf, "arrays of latin squares");
   refresh();
 #endif
   mpz_add_ui(pack->perf.counter, pack->perf.counter, 1);
@@ -225,12 +225,6 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
     fprintf(stderr, "[ABORT] Found %"PRIu64" < 2 sets.\n", rels.count);
     return;
   }
-
-  da_free(rels);
-
-  getchar();
-
-  return;
 
   // arrays holding the latin squares
   latin_square *P = calloc(a.r, sizeof(latin_square));
