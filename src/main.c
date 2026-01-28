@@ -31,7 +31,7 @@ int main(int argc, char **argv)
   srand(69);
 
   taxicab a = {0};
-  taxicab_init(&a, 3, 3, 2);
+  taxicab_init(&a, 3, 4, 2);
   find_taxicab(a);
 
 #if 0

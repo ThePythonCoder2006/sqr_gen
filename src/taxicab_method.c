@@ -1,4 +1,5 @@
 #include "curses.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -10,13 +11,14 @@
 #include "pow_m_sqr.h"
 #include "arithmetic.h"
 #include "taxicab_method.h"
+#include "permut.h"
 
 #include "find_sets.h"
 #include "find_latin_squares.h"
 
 typedef struct da_sets_s
 {
-  uint32_t **items;
+  rel_item **items;
   size_t count;
   size_t capacity;
   uint32_t n; // size of each set
@@ -34,7 +36,7 @@ uint8_t search_pow_m_sqr_from_taxicab_iterate_over_sets_callback(uint8_t *select
 
   if (set_has_magic_sum(selected, *(pack->M)))
   {
-    uint32_t *set = calloc(n, sizeof(uint32_t));
+    rel_item *set = calloc(n, sizeof(rel_item));
     for (uint32_t i = 0; i < n; ++i)
       for (uint32_t j = 0; j < n; ++j)
         if (GET_AS_MAT(selected, i, j, n))
@@ -52,7 +54,13 @@ uint8_t search_pow_m_sqr_from_taxicab_find_sets_collision_callback(uint8_t *sele
   // find_sets_print_selection(selected, n, NULL);
 
   uint64_t acc = 0;
-  uint32_t *set = calloc(n, sizeof(uint32_t));
+  rel_item *set = calloc(n, sizeof(rel_item));
+  if (set == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   for (uint32_t i = 0; i < n; ++i)
     for (uint32_t j = 0; j < n; ++j)
       if (GET_AS_MAT(selected, i, j, n))
@@ -80,12 +88,7 @@ typedef struct
   perf_counter perf;
 } iterate_over_latin_squares_array_pack;
 
-uint8_t fall_on_different_line_after_latin_squares(uint32_t *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s);
 void print_iterate_over_latin_squares_array_pack(iterate_over_latin_squares_array_pack *pack);
-void printf_rel(uint32_t *rel, const size_t n);
-uint8_t rels_are_disjoint(uint32_t *rel1, uint32_t *rel2, const size_t n);
-uint8_t rels_are_compatible(uint32_t *rel1, uint32_t *rel2, const size_t n);
-
 uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data);
 uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data);
 uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark);
@@ -122,12 +125,12 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
 {
   const uint64_t n = r * s;
 
-  da_foreach(uint32_t *, rel, &rels)
+  da_foreach(rel_item *, rel, &rels)
   {
     if (!fall_on_different_line_after_latin_squares(*rel, P, Q, r, s))
       continue;
 
-    da_foreach(uint32_t *, prev_rel, &mark)
+    da_foreach(rel_item *, prev_rel, &mark)
     {
       if (rels_are_compatible(*rel, *prev_rel, n))
       {
@@ -148,8 +151,8 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
 
 #ifndef __DEBUG__
 
-        uint32_t main_diag[6] = {0, 1, 2, 3, 4, 5};
-        uint32_t anti_diag[6] = {5, 4, 3, 2, 1, 0};
+        rel_item main_diag[6] = {0, 1, 2, 3, 4, 5};
+        rel_item anti_diag[6] = {5, 4, 3, 2, 1, 0};
 
         clear();
         mvpow_m_sqr_printw_highlighted(0, 0, *M, main_diag, anti_diag, COLOR_YELLOW, COLOR_CYAN);
@@ -182,8 +185,6 @@ typedef struct
   uint8_t (*f)(uint8_t *selected, uint32_t n, void *data);
   pow_m_sqr_and_da_sets_packed* data;
 } find_sets_collision_method_pack;
-
-#define THREADS_COUNT 8
 
 void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
 {
@@ -225,6 +226,12 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
     return;
   }
 
+  da_free(rels);
+
+  getchar();
+
+  return;
+
   // arrays holding the latin squares
   latin_square *P = calloc(a.r, sizeof(latin_square));
   latin_square *Q = calloc(a.s, sizeof(latin_square));
@@ -246,6 +253,7 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
   move(0, 0);
   printw("was%s able to find compatible latin square from the found sets\n", res ? "" : " not");
   refresh();
+  getch();
 #else
   printf("was%s able to find compatible latin square from the found sets\n", res ? "" : " not");
 #endif

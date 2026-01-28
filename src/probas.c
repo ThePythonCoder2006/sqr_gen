@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 #include "pow_m_sqr.h"
 #include "arithmetic.h"
@@ -118,6 +119,12 @@ double proba_without_latin_square(pow_m_sqr M)
   const uint64_t n = M.n;
   const uint64_t m = pow_m_sqr_sum_row(M, 0);
   uint64_t *arr = calloc(n * n, sizeof(uint64_t));
+  if (arr == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   for (uint64_t i = 0; i < n * n; ++i)
     arr[i] = ui_pow_ui(M_SQR_GET_AS_VEC(M, i), M.d);
   const double c = coefficient_of_variation(arr, n * n);

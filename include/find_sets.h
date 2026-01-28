@@ -22,6 +22,8 @@ typedef struct sets_search_data_s
   uint32_t r, s, n;
 } sets_search_data;
 
+#define BATCH_SIZE 256
+
 void iterate_over_sets_callback(uint32_t r, uint32_t s, set_callback f, void *data);
 uint8_t find_sets_print_selection(uint8_t *selected, uint32_t n, void *_);
 uint8_t set_has_magic_sum(const uint8_t *selected, const pow_m_sqr M);

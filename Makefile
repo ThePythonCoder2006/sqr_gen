@@ -3,7 +3,7 @@ CC := gcc
 SRCDIR := src
 BINDIR := bin
 ODIR := $(SRCDIR)/obj
-IDIR := include nob .
+IDIR := include .
 LDIR := libs
 
 CCFLAGS := -Wall -Wextra -O3# -pedantic
@@ -14,8 +14,8 @@ else
 	LFLAGS += -lm
 endif
 LFLAGS += -lgmp -lcurses
-CFLAGS := $(CCFLAGS) $(IFLAGS)# -D__DEBUG__
-DBFLAGS := -ggdb -D__DEBUG__
+CFLAGS := $(CCFLAGS) $(IFLAGS) -D__DEBUG__
+DBFLAGS := -ggdb# -D__DEBUG__
 
 SRC := $(wildcard $(SRCDIR)/*.c)
 OFILES := $(SRC:$(SRCDIR)/%.c=$(ODIR)/%.o)
@@ -45,4 +45,4 @@ $(ODIR)/%_db.o: $(SRCDIR)/%.c $(HFILES) Makefile | $(ODIR)
 	$(CC) $< -c -o $@ $(CFLAGS) $(DBFLAGS)
 
 $(BINDIR) $(ODIR):
-	mkdir "$@"
+	mkdir -p "$@"

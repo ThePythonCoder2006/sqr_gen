@@ -17,6 +17,7 @@
  *                sum= s sum= s   ...   sum= s
  */
 
+#include <gmp.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -29,6 +30,8 @@
 #include "arithmetic.h"
 
 #include "perf_counter.h"
+
+#include "curses.h"
 
 // forward declaration
 uint8_t find_sets_print_selection(uint8_t *selected, uint32_t n, void *_);
@@ -144,7 +147,7 @@ uint8_t iterate_over_sets_callback_inside(sets_search_data *d, uint32_t current_
 typedef struct hshtbl_node_s
 {
   uint64_t sum;
-  uint32_t *items;
+  rel_item *items;
 } hshtbl_node;
 
 typedef struct
@@ -167,7 +170,7 @@ void init_hshtbl(hshtbl* h)
 }
 
 /*
- * returns an array of n - 1 hshtbls as there is no need for a hshtbl for sets 16 entries long
+ * returns an array of n - 1 hshtbls as there is no need for a hshtbl for sets n entries long
  * hshtbl with index k will hold set of postions with k + 1 entries
  */
 hshtbl *init_hshtbls(const uint32_t n)
@@ -183,19 +186,20 @@ hshtbl *init_hshtbls(const uint32_t n)
   return table;
 }
 
-void free_hshtbl(hshtbl table)
+void free_hshtbl(hshtbl *table)
 {
-  for (uint32_t i = 0; i < table.capacity; i++)
-    if (table.arr[i].items != NULL)
-      free(table.arr[i].items);
-  free(table.arr);
+  for (uint32_t i = 0; i < table->capacity; i++)
+    if (table->arr[i].items != NULL)
+      free(table->arr[i].items);
+  free(table->arr);
+  table->arr = NULL;
   return;
 }
 
 void free_hshtbls(hshtbl *table, const uint32_t n)
 {
   for (uint32_t k = 0; k < n - 1; ++k)
-    free_hshtbl(table[k]);
+    free_hshtbl(table + k);
 
   free(table);
 
@@ -221,7 +225,7 @@ static inline uint32_t hash_func(uint64_t x)
 /*
   set1 and set2 MUST have the same size of count ie set2_selected MUST have exactly count entries equal to 1 and every other being 0
  */
-uint8_t sets_equal_items_selected(const uint32_t *set1_items, const uint8_t *set2_selected, const uint64_t count, const uint64_t n)
+uint8_t sets_equal_items_selected(const rel_item *set1_items, const uint8_t *set2_selected, const uint64_t count, const uint64_t n)
 {
   for (uint64_t k = 0; k < count; ++k)
   {
@@ -245,6 +249,11 @@ void hshtbl_resize(hshtbl* table)
     table->capacity *= 2;
 
   hshtbl_node* bigger = calloc(table->capacity, sizeof(table->arr[0]));
+  if (bigger == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
 
   for (size_t i = 0; i < prev_capa; ++i)
   {
@@ -252,7 +261,7 @@ void hshtbl_resize(hshtbl* table)
     {
       uint32_t h = hash_func(table->arr[i].sum) % table->capacity;
       while (bigger[h].items)
-        ++h;
+        h = (h + 1) % table->capacity;
 
       bigger[h] = table->arr[i];
     }
@@ -268,7 +277,7 @@ void hshtbl_resize(hshtbl* table)
  * modifies table
  * items and selected are different representations of the same data
  */
-void hshtbl_insert(hshtbl *table, const uint32_t *items, const uint8_t *selected, const uint32_t count, const uint64_t sum, const uint64_t n)
+void hshtbl_insert(hshtbl *table, const rel_item *items, const uint8_t *selected, const uint32_t count, const uint64_t sum, const uint64_t n)
 {
   uint64_t h = hash_func(sum) % table->capacity;
 
@@ -283,13 +292,13 @@ void hshtbl_insert(hshtbl *table, const uint32_t *items, const uint8_t *selected
   };
 
   node.sum = sum;
-  node.items = calloc(count, sizeof(uint32_t));
+  node.items = calloc(count, sizeof(rel_item));
   if (node.items == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
     exit(1);
   }
-  memcpy(node.items, items, count * sizeof(uint32_t));
+  memcpy(node.items, items, count * sizeof(rel_item));
 
   table->arr[h] = node;
   ++table->count;
@@ -308,7 +317,7 @@ typedef struct
   uint8_t *selected; // matrix of bools of size n x n
   uint32_t *row_sum, *row_sum_copy; // array of size s
   uint32_t *col_sum, *col_sum_copy; // array of size r
-  uint32_t *items, *items2;   // array of size n
+  rel_item *items, *items2;   // array of size n
   // lists of entry indices of open blocs/cells, there are at most r * s
   // they are both array of size r * s = s * r = n
   uint32_t *open_blocs;
@@ -328,8 +337,8 @@ void init_state(state *pack, const uint32_t r, const uint32_t s)
   pack->row_sum_copy = calloc(s, sizeof(uint32_t));
   pack->col_sum_copy = calloc(r, sizeof(uint32_t));
 
-  pack->items = calloc(n, sizeof(uint32_t));
-  pack->items2 = calloc(n, sizeof(uint32_t));
+  pack->items = calloc(n, sizeof(rel_item));
+  pack->items2 = calloc(n, sizeof(rel_item));
 
   // lists of entry indices of open blocs/cells, there are at most r * s
   pack->open_blocs = calloc(r * s, sizeof(uint32_t));
@@ -343,6 +352,8 @@ void init_state(state *pack, const uint32_t r, const uint32_t s)
 
   timer_start(&pack->perf.time);
   mpz_init_set_ui(pack->perf.counter, 0);
+  mpf_init_set_ui(pack->perf.time_, 0);
+  mpf_init_set_ui(pack->perf.speed, 0);
 
   return;
 }
@@ -378,9 +389,11 @@ void free_state(state pack, const uint32_t r, const uint32_t s)
   free(pack.open_entries_in_bloc);
 
   free_hshtbls(pack.tables, r * s);
-  free_hshtbl(pack.found);
+  free_hshtbl(&pack.found);
 
   mpz_clear(pack.perf.counter);
+  mpf_clear(pack.perf.time_);
+  mpf_clear(pack.perf.speed);
   (void)timer_stop(&pack.perf.time);
   return;
 }
@@ -431,7 +444,7 @@ uint32_t select_open_entry_in_bloc(const uint8_t *selected, uint32_t *open_entri
   return open_entries_in_bloc[rand() % open_entries_in_bloc_cnt];
 }
 
-int8_t are_compatible_sets(const uint8_t *selected, const uint32_t *items, uint32_t *row_sum, uint32_t *col_sum, const uint32_t r, const uint32_t s, const uint32_t count)
+int8_t are_compatible_sets(const uint8_t *selected, const rel_item *items, uint32_t *row_sum, uint32_t *col_sum, const uint32_t r, const uint32_t s, const uint32_t count)
 {
   const uint32_t n = r * s;
   // check for repeated entries
@@ -463,7 +476,7 @@ int8_t are_compatible_sets(const uint8_t *selected, const uint32_t *items, uint3
   return 1;
 }
 
-uint64_t set_items_sqared_sum(uint32_t *items, uint32_t n)
+uint64_t set_items_sqared_sum(rel_item *items, uint32_t n)
 {
   uint64_t acc = 0;
   for (uint32_t i = 0; i < n; ++i)
@@ -471,7 +484,7 @@ uint64_t set_items_sqared_sum(uint32_t *items, uint32_t n)
   return acc;
 }
 
-uint8_t is_in_hshtbl(hshtbl h, uint32_t *items, uint32_t n)
+uint8_t is_in_hshtbl(hshtbl h, rel_item *items, uint32_t n)
 {
   uint64_t c = hash_func(set_items_sqared_sum(items, n)) % h.capacity;
   uint64_t i = c;
@@ -532,13 +545,16 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
 
     // add entries from the match
     for (uint32_t i = 0; i < n - count; ++i)
-      pack->selected[node.items[i]] = 1;
+    {
+      uint32_t pos = node.items[i];
+      pack->selected[pos] = 1;
+    }
 
     memset(pack->items2, 0, n * sizeof(*node.items));
     for (uint32_t k = 0, idx = 0; k < count && idx < n * n; ++idx)
     {
       if (pack->selected[idx])
-        pack->items2[k++] = idx;
+        pack->items2[k++] = (rel_item)idx;
     }
     for (uint32_t k = count; k < n; ++k)
       pack->items2[k] = node.items[k - count];
@@ -558,9 +574,12 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
     // cont:
     // remove entries from the match
     for (uint32_t i = 0; i < n - count; ++i)
-      pack->selected[node.items[i]] = 0;
+    {
+      uint32_t pos = node.items[i];
+      pack->selected[pos] = 0;
+    }
 
-  } while ((node = table->arr[++h]).items != NULL && node.sum == sum);
+  } while ((node = table->arr[h = (h + 1) % table->capacity]).items != NULL && node.sum == sum);
 
 ret:
   return retval;
@@ -630,7 +649,7 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
     ++(pack->col_sum[selected_bj]);
 
     // get one entry from the list we selected
-    uint32_t selected_entry = select_open_entry_in_bloc(pack->selected, pack->open_entries_in_bloc, selected_bi, selected_bj, r, s);
+    rel_item selected_entry = select_open_entry_in_bloc(pack->selected, pack->open_entries_in_bloc, selected_bi, selected_bj, r, s);
 #else
 
     uint32_t selected_entry = 1;
@@ -712,6 +731,12 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
 
   uint64_t tries = 0;
   size_t *prev_counts = calloc((n - 1), sizeof(size_t));
+  if (prev_counts == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   uint8_t refresh_frames = 0;
 
   int8_t ret;
@@ -770,16 +795,8 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
     if (refresh_frames == 0)
     {
       printf("\rtot_count = %e", (double)tables_tot_count);
-      // printf("\rh_0_count = %zu", pack.tables[0].count);
-
-      if (tables_tot_count >= 10 * 1000 * 1000)
-      {
-        putchar('\n');
-        ret = -1;
-      }
+      fflush(stdout);
     }
-    // gmp_printf("\r%5"PRIu64", %Zu", tries, pack.perf.boards_tested);
-    // fflush(stdout);
 #endif
     ++refresh_frames;
   } while (ret >= 0);

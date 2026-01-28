@@ -116,9 +116,21 @@ int try_store_rep(uint64_t sum, Rep *rep)
   }
 
   node = malloc(sizeof(Node));
+  if (node == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   node->sum = sum;
   node->rep_count = 1;
   node->reps = malloc(sizeof(Rep) * MAX_REP_PER_SUM);
+  if (node->reps == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   node->reps[0].terms = malloc(sizeof(int) * rep->s);
   memcpy(node->reps[0].terms, rep->terms, sizeof(int) * rep->s);
   node->reps[0].s = rep->s;
@@ -333,6 +345,12 @@ void find_taxicab(taxicab T)
 
   int *terms = malloc(sizeof(int) * T.s);
   Rep *result_reps = malloc(sizeof(Rep) * T.r);
+  if (result_reps == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   // uint64_t result_sum =
   (void) find_terms(result_reps, terms, T.r, T.s);
 

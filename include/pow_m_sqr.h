@@ -25,6 +25,8 @@ typedef struct highlighted_square_s
   } *arr;
 } highlighted_square;
 
+typedef uint8_t rel_item;
+
 // will evalutate `M` multiple times !!
 #define M_SQR_GET_AS_MAT(M, i, j) ((M).arr[((M).rows[(i)]) * ((M).n) + ((M).cols[(j)])])
 #define M_SQR_GET_AS_VEC(M, idx) ((M).arr[(idx)])
@@ -38,9 +40,9 @@ int pow_m_sqr_init(pow_m_sqr *M, uint64_t n, uint64_t d);
 void pow_m_sqr_clear(pow_m_sqr *M);
 void highlighted_square_init(highlighted_square *ret, const uint32_t n, const uint32_t d);
 void highlighted_square_clear(highlighted_square *ret);
-void highlighted_square_from_pow_m_sqr(highlighted_square *ret, const pow_m_sqr *M, const uint32_t *rel1, const uint32_t *rel2);
-void pow_m_sqr_from_highlighted_square(pow_m_sqr *ret, uint32_t *rel1, uint32_t *rel2, const highlighted_square *M);
-void rels_from_highlighted_square(uint32_t *rel1, uint32_t *rel2, const highlighted_square *M);
+void highlighted_square_from_pow_m_sqr(highlighted_square *ret, const pow_m_sqr *M, const rel_item *rel1, const rel_item *rel2);
+void pow_m_sqr_from_highlighted_square(pow_m_sqr *ret, rel_item *rel1, rel_item *rel2, const highlighted_square *M);
+void rels_from_highlighted_square(rel_item *rel1, rel_item *rel2, const highlighted_square *M);
 
 // magic square checking
 uint64_t pow_m_sqr_sum_col(pow_m_sqr M, uint64_t j);
@@ -52,10 +54,8 @@ uint8_t *nb_occurence_pow_m_sqr(pow_m_sqr M, uint64_t N);
 uint8_t is_pow_m_sqr(pow_m_sqr M);
 uint8_t is_pow_semi_m_sqr(pow_m_sqr M);
 
-void permute_into_pow_m_sqr(pow_m_sqr *M, uint32_t *diag1, uint32_t *diag2);
-
 // IO
-void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, uint32_t *items1, uint32_t *items2, int BG_COLOR1, int BG_COLOR2);
+void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, rel_item *items1, rel_item *items2, int BG_COLOR1, int BG_COLOR2);
 void mvpow_m_sqr_printw(int y, int x, pow_m_sqr M);
 void mvhighlighted_square_printw(int y0, int x0, highlighted_square M, int BG_COLOR1, int BG_COLOR2);
 void pow_m_sqr_printf(pow_m_sqr M);

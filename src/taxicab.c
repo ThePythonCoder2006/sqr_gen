@@ -9,6 +9,7 @@
 #include "arithmetic.h"
 
 #include "gmp.h"
+#include "curses.h"
 
 uint64_t taxicab_sum_row(taxicab T, uint64_t i)
 {
@@ -251,6 +252,12 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
   if (heat_map == NULL)
   {
     heat_map = calloc(X, sizeof(uint8_t));
+    if (heat_map == NULL)
+    {
+      fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+      exit(1);
+    }
+
     for (uint64_t idx = 0; idx < progress; ++idx)
       heat_map[TAXI_GET_AS_VEC(T, idx)] = 1;
   }

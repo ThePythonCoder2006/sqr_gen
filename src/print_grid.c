@@ -154,7 +154,7 @@ size_t taxi_max_col_width(size_t *max, size_t *width, taxicab T)
 /*
  * if non-NULL, items must be of size n else it will not be used
  */
-void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, uint32_t *items1, uint32_t *items2, int BG_COLOR1, int BG_COLOR2)
+void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, rel_item *items1, rel_item *items2, int BG_COLOR1, int BG_COLOR2)
 {
   size_t *max = calloc(M.n, sizeof(size_t));
   if (max == NULL)

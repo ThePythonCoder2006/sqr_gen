@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -80,6 +81,12 @@ uint8_t fall_on_different_line_after_latin_squares(uint32_t *poses, latin_square
   const uint64_t n = r * s;
   uint8_t *rows = calloc(n, sizeof(uint8_t));
   uint8_t *cols = calloc(n, sizeof(uint8_t));
+  if (rows == NULL || cols == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   for (uint64_t i = 0; i < n; ++i)
   {
     // printf("[2] %u, %u\n", poses[i].i, poses[i].j);
@@ -96,7 +103,7 @@ uint8_t fall_on_different_line_after_latin_squares(uint32_t *poses, latin_square
   return 1;
 }
 
-void printf_rel(uint32_t *rel, const size_t n)
+void printf_rel(rel_item *rel, const size_t n)
 {
   for (size_t i = 0; i < n; ++i)
     printf("(%"PRIu64", %u), ", i, rel[i]);
@@ -104,7 +111,7 @@ void printf_rel(uint32_t *rel, const size_t n)
   return;
 }
 
-uint8_t rels_are_disjoint(uint32_t *rel1, uint32_t *rel2, const size_t n)
+uint8_t rels_are_disjoint(rel_item *rel1, rel_item *rel2, const size_t n)
 {
   // check for every row if they intersect
   // Could be replaced with a memcmp
@@ -115,7 +122,7 @@ uint8_t rels_are_disjoint(uint32_t *rel1, uint32_t *rel2, const size_t n)
   return 1;
 }
 
-uint8_t rels_are_compatible(uint32_t *rel1, uint32_t *rel2, const size_t n)
+uint8_t rels_are_compatible(rel_item *rel1, rel_item *rel2, const size_t n)
 {
   if (!rels_are_disjoint(rel1, rel2, n))
     return 0;
@@ -166,7 +173,7 @@ uint8_t rels_are_compatible(uint32_t *rel1, uint32_t *rel2, const size_t n)
  * diag[i] must be the column of the element of the set on line i
  * modifies M
  */
-void permute_into_pow_m_sqr(pow_m_sqr *M, uint32_t *diag1, uint32_t *diag2)
+void permute_into_pow_m_sqr(pow_m_sqr *M, rel_item *diag1, rel_item *diag2)
 {
   const uint64_t n = M->n;
 
@@ -174,8 +181,14 @@ void permute_into_pow_m_sqr(pow_m_sqr *M, uint32_t *diag1, uint32_t *diag2)
   highlighted_square_init(&H, n, M->d);
   highlighted_square_from_pow_m_sqr(&H, M, diag1, diag2);
 
-  uint32_t *rel1 = calloc(n, sizeof(uint32_t));
-  uint32_t *rel2 = calloc(n, sizeof(uint32_t));
+  rel_item *rel1 = calloc(n, sizeof(rel_item));
+  rel_item *rel2 = calloc(n, sizeof(rel_item));
+
+  if (rel1 == NULL || rel2 == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1); 
+  }
 
   // fix the main diag
   for (uint32_t i = 0; i < n; ++i)
@@ -283,7 +296,7 @@ void highlighted_square_clear(highlighted_square *ret)
 /*
  * ret must be a non-NULL pointer to an inited highlighted_square
  */
-void highlighted_square_from_pow_m_sqr(highlighted_square *ret, const pow_m_sqr *M, const uint32_t *rel1, const uint32_t *rel2)
+void highlighted_square_from_pow_m_sqr(highlighted_square *ret, const pow_m_sqr *M, const rel_item *rel1, const rel_item *rel2)
 {
   ret->n = M->n;
   ret->d = M->d;
@@ -307,7 +320,7 @@ void highlighted_square_from_pow_m_sqr(highlighted_square *ret, const pow_m_sqr 
  * ret must be a non-NULL pointer to an inited pow_m_sqr
  * sets the corresponding rels into rel1 and rel2
  */
-void pow_m_sqr_from_highlighted_square(pow_m_sqr *ret, uint32_t *rel1, uint32_t *rel2, const highlighted_square *M)
+void pow_m_sqr_from_highlighted_square(pow_m_sqr *ret, rel_item *rel1, rel_item *rel2, const highlighted_square *M)
 {
   const uint32_t n = M->n;
   ret->n = M->n;
@@ -335,7 +348,7 @@ void pow_m_sqr_from_highlighted_square(pow_m_sqr *ret, uint32_t *rel1, uint32_t 
   return;
 }
 
-void rels_from_highlighted_square(uint32_t *rel1, uint32_t *rel2, const highlighted_square *M)
+void rels_from_highlighted_square(rel_item *rel1, rel_item *rel2, const highlighted_square *M)
 {
   const uint32_t n = M->n;
   memset(rel1, 0, n * sizeof(*rel1));

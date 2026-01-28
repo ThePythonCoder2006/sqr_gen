@@ -57,6 +57,9 @@ raylib/*
 
 .cache/*
 bin/*
+massif.out.*
+dhat.out.*
+nob.old
 
 # vim files
 *~

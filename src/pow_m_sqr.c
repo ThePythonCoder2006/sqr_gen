@@ -342,6 +342,12 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
   if (heat_map == NULL)
   {
     heat_map = calloc(X, sizeof(uint8_t));
+    if (heat_map == NULL)
+    {
+      fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+      exit(1);
+    }
+
     for (uint64_t idx = 0; idx < progress; ++idx)
       heat_map[M_SQR_GET_AS_VEC(base, idx)] = 1;
   }
@@ -508,6 +514,12 @@ void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square
 void permute_cols(pow_m_sqr M, uint64_t *permut)
 {
   uint64_t *arr_copy = calloc(M.n * M.n, sizeof(*(M.arr)));
+  if (arr_copy == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   memcpy(arr_copy, M.arr, M.n * M.n * sizeof(*(M.arr)));
 
   for (uint64_t i = 0; i < M.n; ++i)
@@ -526,6 +538,12 @@ void permute_cols(pow_m_sqr M, uint64_t *permut)
 void permute_lines(pow_m_sqr M, uint64_t *permut)
 {
   uint64_t *arr_copy = calloc(M.n * M.n, sizeof(*(M.arr)));
+  if (arr_copy == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   memcpy(arr_copy, M.arr, M.n * M.n * sizeof(*(M.arr)));
 
   for (uint64_t i = 0; i < M.n; ++i)
@@ -543,6 +561,11 @@ void permute_lines(pow_m_sqr M, uint64_t *permut)
 void permute_cols(pow_m_sqr M, uint64_t *permut)
 {
   uint32_t *t = calloc(M.n, sizeof(*M.cols));
+  if (t == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
   memcpy(t, M.cols, M.n * sizeof(*M.cols));
   for (uint32_t j = 0; j < M.n; ++j)
     M.cols[permut[j]] = t[j];
@@ -557,6 +580,12 @@ void permute_cols(pow_m_sqr M, uint64_t *permut)
 void permute_lines(pow_m_sqr M, uint64_t *permut)
 {
   uint32_t *t = calloc(M.n, sizeof(*M.rows));
+  if (t == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   memcpy(t, M.cols, M.n * sizeof(*M.rows));
   for (uint32_t i = 0; i < M.n; ++i)
     M.rows[permut[i]] = t[i];
@@ -590,6 +619,12 @@ void random_perm(uint64_t *l, size_t n)
 void shuffle_cols(pow_m_sqr M)
 {
   uint64_t *l = calloc(M.n, sizeof(uint64_t));
+  if (l == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   for (uint64_t i = 0; i < M.n; ++i)
     l[i] = i;
 
@@ -607,6 +642,12 @@ void shuffle_cols(pow_m_sqr M)
 void shuffle_lines(pow_m_sqr M)
 {
   uint64_t *l = calloc(M.n, sizeof(uint64_t));
+  if (l == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   for (uint64_t i = 0; i < M.n; ++i)
     l[i] = i;
 
@@ -621,6 +662,12 @@ void shuffle_lines(pow_m_sqr M)
 void shuffle_lines_and_cols_with_same_perm(pow_m_sqr M)
 {
   uint64_t *l = calloc(M.n, sizeof(uint64_t));
+  if (l == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
   for (uint64_t i = 0; i < M.n; ++i)
     l[i] = i;
 
