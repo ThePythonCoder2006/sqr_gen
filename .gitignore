@@ -60,6 +60,7 @@ bin/*
 massif.out.*
 dhat.out.*
 nob.old
+nob
 
 # vim files
 *~

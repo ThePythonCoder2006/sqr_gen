@@ -170,23 +170,21 @@ void init_hshtbl(hshtbl* h)
   h->capacity = HSHTBL_BASE_SIZE;
 }
 
-#define PREFILL_CAP 1
+#define PREFILL_CAP 3
 
 /*
- * returns an array of n - 1 - PREFILL_CAP hshtbls. Why only n-1-PREFILL_CAP:
- *  - there is no need for a hshtbl for sets n entries long
- *  - there is no need to store partial rels of more than n-PREFILL_CAP entries, as there is no way to find any new PREFILL_CAP element long rels, checking for collisions is enough
+ * returns an array of n/2 hshtbls.
  * hshtbl with index k will hold set of postions with k + 1 entries
  */
 hshtbl *init_hshtbls(const uint32_t n)
 {
-  hshtbl *table = calloc(n - 1 - PREFILL_CAP, sizeof(hshtbl));
+  hshtbl *table = calloc(n/2, sizeof(hshtbl));
   if (table == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
     exit(1);
   }
-  for (uint32_t i = 0; i < n - 1 - PREFILL_CAP; ++i)
+  for (uint32_t i = 0; i < n/2; ++i)
     init_hshtbl(table + i);
   return table;
 }
@@ -203,7 +201,7 @@ void free_hshtbl(hshtbl *table)
 
 void free_hshtbls(hshtbl *table, const uint32_t n)
 {
-  for (uint32_t k = 0; k < n - 1 - PREFILL_CAP; ++k)
+  for (uint32_t k = 0; k < n/2; ++k)
     free_hshtbl(table + k);
 
   free(table);
@@ -313,12 +311,54 @@ void hshtbl_insert(hshtbl *table, const rel_item *items, const uint8_t *selected
   return;
 }
 
+void prefill_hshtbls_inside(hshtbl* tables, pow_m_sqr M, rel_item* rel, uint8_t* selected, size_t p, size_t mu, size_t n, size_t k)
+{
+  if (p >= 1)
+    hshtbl_insert(tables + p - 1, rel, selected, p, mu, n);
+
+  if (p >= k)
+    return;
+
+  for (size_t i = 0; i < n*n; ++i)
+  {
+    if (selected[i])
+      continue;
+
+    rel[p] = i;
+    selected[i] = 1;
+    prefill_hshtbls_inside(tables, M, rel, selected, p + 1,
+        mu + ui_pow_ui(M_SQR_GET_AS_VEC(M, i), M.d),
+        n, k);
+    selected[i] = 0;
+  }
+
+  return;
+}
+
+void prefill_hshtbls(hshtbl* tables, pow_m_sqr M, size_t n, size_t k)
+{
+  rel_item* rel = calloc(k, sizeof(rel_item));
+  uint8_t* selected = calloc(n*n, sizeof(uint8_t));
+  if (rel == NULL || selected == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  prefill_hshtbls_inside(tables, M, rel, selected, 0, 0, n, k);
+
+  free(rel);
+  free(selected);
+
+  return;
+}
+
 typedef struct
 {
   uint64_t mu;
   pow_m_sqr *M;
   hshtbl found;     // pointer to single hshtbl to store already found solutions
-  hshtbl *tables;    // array of hshtbls of size (n - 1)
+  hshtbl *tables;    // array of hshtbls of size n/2
   uint8_t *selected; // matrix of bools of size n x n
   uint32_t *row_sum, *row_sum_copy; // array of size s
   uint32_t *col_sum, *col_sum_copy; // array of size r
@@ -330,9 +370,11 @@ typedef struct
   perf_counter perf;
 } state;
 
-void init_state(state *pack, const uint32_t r, const uint32_t s)
+void init_state(state *pack, pow_m_sqr* M, const uint32_t r, const uint32_t s)
 {
   const size_t n = r * s;
+  pack->M = M;
+
   pack->tables = init_hshtbls(r * s);
   init_hshtbl(&pack->found);
 
@@ -360,6 +402,8 @@ void init_state(state *pack, const uint32_t r, const uint32_t s)
   mpf_init_set_ui(pack->perf.time_, 0);
   mpf_init_set_ui(pack->perf.speed, 0);
   mpf_init_set_ui(pack->perf.peak_speed, 0);
+
+  prefill_hshtbls(pack->tables, *pack->M, n, PREFILL_CAP);
 
   return;
 }
@@ -527,7 +571,7 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
   const uint32_t n = r * s;
 
   // do not do collisions on lower sizes, as we do not store the sets
-  if (count <= PREFILL_CAP)
+  if (count <= PREFILL_CAP || count < n/2)
     return NOT_FOUND;
 
   hshtbl *table = pack->tables + (n - count - 1);
@@ -684,9 +728,10 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
       break; // we found a solution, dont insert nor check for collisions
 
     /*
-     * do not insert partial rels which are n-1 elements long, as there is no way to find any new 1 element long rels, checking for collisions is enough
+     * do not insert partial rels which are more than n/2 elements long, checking for collisions is enough
+     * nor insert the ones which are already saved in PREFILL_CAP
      */
-    if (count < n - 1)
+    if (PREFILL_CAP < count && count <= n/2)
       hshtbl_insert(&(pack->tables[count - 1]), pack->items, pack->selected, count, sum, n); // -1 because pack->tables is zero indexed
 
     int8_t ret = check_if_set_can_be_formed_from_collision(pack, sum, r, s, count, f, data);
@@ -736,12 +781,11 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
   const size_t n = r * s;
 
   state pack = {0};
-  init_state(&pack, r, s);
+  init_state(&pack, &M, r, s);
   pack.mu = pow_m_sqr_sum_row(M, 0); // magic sum
-  pack.M = &M;
 
   uint64_t tries = 0;
-  size_t *prev_counts = calloc((n - 1), sizeof(size_t));
+  size_t *prev_counts = calloc(n/2, sizeof(size_t));
   if (prev_counts == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
@@ -761,7 +805,7 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
 
     uint8_t changed = 0;
     uint64_t tables_tot_count = 0, tables_tot_capa = 0;
-    for (uint32_t k = 0; k < (n - 1 - PREFILL_CAP); ++k)
+    for (uint32_t k = 0; k < n/2; ++k)
     {
       /*
        * check if we changed, then update the counts hence we cannot break
@@ -788,7 +832,7 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
     {
       clear();
       move(0, 0);
-      for (uint32_t i = 0; i < (n - 1 - PREFILL_CAP); ++i)
+      for (uint32_t i = 0; i < n/2; ++i)
       {
         printw("%7"PRIu64"/%7"PRIu64", ", pack.tables[i].count, pack.tables[i].capacity);
       }
