@@ -16,7 +16,7 @@
 #include "arithmetic.h"
 
 #include "gmp.h"
-#include "curses.h"
+#include <ncurses.h>
 
 /*
  * sums the entries of the j-th column of M into ret
@@ -360,7 +360,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
 
   if ((mpz_get_ui(perf->counter) & 0xffffff) == 0 && mpz_cmp_ui(perf->counter, 0) != 0)
   {
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
     move(0, 0);
     clear();
 
@@ -373,7 +373,7 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     refresh();
 #else
     printf("average speed = ");
-    printf_perf(*perf, "grids");
+    printf_perf(perf, "grids");
     pow_m_sqr_printf(base);
     gmp_printf("%Zu boards have been rejected so far.\n Current time: %lfs\n", perf->counter, timer_stop(&perf->time));
 #endif

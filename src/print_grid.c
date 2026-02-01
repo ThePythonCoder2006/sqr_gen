@@ -6,7 +6,7 @@
 
 #include "latin_squares.h"
 #include "pow_m_sqr.h"
-#include "curses.h"
+#include <ncurses.h>
 
 #undef ACS_TTEE
 #undef ACS_RTEE
@@ -150,7 +150,7 @@ size_t taxi_max_col_width(size_t *max, size_t *width, taxicab T)
   return dwidth;
 }
 
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
 /*
  * if non-NULL, items must be of size n else it will not be used
  */
@@ -205,7 +205,8 @@ void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, rel_item *items
         attron(COLOR_PAIR(1));
       else if (selected2[i * M.n + j])
         attron(COLOR_PAIR(2));
-      x += mvprintw(y, x, "%*u", max[j] + 1, M.d);
+      mvprintw(y, x, "%*u", (int)max[j] + 1, M.d);
+      x += max[j] + dwidth;
       attroff(COLOR_PAIR(1));
       attroff(COLOR_PAIR(2));
       if (i == 0)
@@ -255,10 +256,14 @@ void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, rel_item *items
         attron(COLOR_PAIR(1));
       else if (selected2[i * M.n + j])
         attron(COLOR_PAIR(2));
-      x += mvprintw(y, x, "%*"PRIu64"", (int)max[j], M_SQR_GET_AS_MAT(M, i, j));
+      mvprintw(y, x, "%*"PRIu64"", (int)max[j], M_SQR_GET_AS_MAT(M, i, j));
+      x += max[j];
       // x += dwidth + 1; // +1 for vertical seperator
       for (uint32_t _ = 0; _ < dwidth; ++_)
-        x += mvprintw(y, x, " ");
+      {
+        mvprintw(y, x, " ");
+        ++x;
+      }
       ++x; // for vertical separator
       attroff(COLOR_PAIR(1));
       attroff(COLOR_PAIR(2));
@@ -271,6 +276,8 @@ void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, rel_item *items
   move(y + 1, x0);
 
   free(max);
+  free(selected1);
+  free(selected2);
 
   return;
 }
@@ -315,7 +322,7 @@ void mvhighlighted_square_printw(int y0, int x0, highlighted_square M, int BG_CO
         attron(COLOR_PAIR(1));
       else if (M_SQR_GET_AS_MAT(M, i, j).colour == 2)
         attron(COLOR_PAIR(2));
-      x += mvprintw(y, x, "%*u", max[j] + 1, M.d);
+      x += mvprintw(y, x, "%*u", (int)max[j] + 1, M.d);
       attroff(COLOR_PAIR(1));
       attroff(COLOR_PAIR(2));
       if (i == 0)
@@ -412,7 +419,8 @@ void mvtaxicab_print(int y0, int x0, taxicab T)
     for (uint64_t j = 0; j < T.s; ++j)
     {
       x += max[j];
-      x += mvprintw(y, x, "%"PRIu64"", T.d);
+      mvprintw(y, x, "%"PRIu64"", T.d);
+      x += dwidth;
       if (i == 0)
       {
         if (j == T.s - 1)
@@ -456,7 +464,8 @@ void mvtaxicab_print(int y0, int x0, taxicab T)
 
     for (uint64_t j = 0; j < T.s; ++j)
     {
-      x += mvprintw(y, x, "%*"PRIu64"", (int)max[j], TAXI_GET_AS_MAT(T, i, j));
+      mvprintw(y, x, "%*"PRIu64"", (int)max[j], TAXI_GET_AS_MAT(T, i, j));
+      x += max[j];
       x += dwidth + 1; // +1 for vertical seperator
     }
 

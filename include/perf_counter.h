@@ -21,7 +21,7 @@ void printf_perf(perf_counter* perf, const char *const name);
 
 #ifdef __PERF_COUNTER_IMPLEMENTATION__
 
-#include "curses.h"
+#include <ncurses.h>
 
 void print_perfw(perf_counter *perf, const char *const name)
 {
@@ -48,6 +48,7 @@ void print_perfw(perf_counter *perf, const char *const name)
   for (; k < len; ++k)
   {
     mpf_div_ui(perf->speed, perf->speed, 1000);
+    mpf_div_ui(perf->peak_speed, perf->peak_speed, 1000);
     if (mpf_cmp_ui(perf->speed, 1000) < 0)
       break;
   }
@@ -77,6 +78,7 @@ void printf_perf(perf_counter* perf, const char *const name)
   for (; k < len - 1; ++k)
   {
     mpf_div_ui(perf->speed, perf->speed, 1000);
+    mpf_div_ui(perf->peak_speed, perf->peak_speed, 1000);
     if (mpf_cmp_ui(perf->speed, 1000) < 0)
       break;
   }

@@ -1,3 +1,6 @@
+#include <ncurses.h>
+
+#include <assert.h>
 #define NOB_STRIP_PREFIX
 #define NOB_IMPLEMENTATION
 #include "nob.h"
@@ -20,7 +23,6 @@
 
 // #include "known/16x16x4.h"
 
-#include "curses.h"
 
 uint8_t print_latin_square_array(latin_square *P, uint64_t len, void *_);
 
@@ -28,6 +30,20 @@ int main(int argc, char **argv)
 {
   (void)argc, (void)argv;
   // srand(time(NULL));
+
+#ifndef __NO_GUI__
+  initscr();
+  
+  if (!has_colors())
+  {
+    fprintf(stderr, "[ERROR] Your terminal does not support color!\n");
+    endwin();
+    exit(1);
+  }
+
+  start_color();
+#endif
+
   srand(69);
 
   taxicab a = {0};
@@ -54,6 +70,7 @@ int main(int argc, char **argv)
   TAXI_GET_AS_MAT(a, 3, 1) = 26;
   TAXI_GET_AS_MAT(a, 3, 2) = 27;
   TAXI_GET_AS_MAT(a, 3, 3) = 31;
+#endif
 
   /*
   TAXI_GET_AS_MAT(a, 0, 0) = 2;
@@ -71,7 +88,6 @@ int main(int argc, char **argv)
   TAXI_GET_AS_MAT(a, 2, 2) = 20;
   TAXI_GET_AS_MAT(a, 2, 3) = 24;
   */
-#endif
 
   taxicab b = {0};
   taxicab_init(&b, a.s, a.r, a.d);
@@ -119,9 +135,8 @@ int main(int argc, char **argv)
   TAXI_GET_AS_MAT(b, 3, 2) = 83;
   */
 
-#ifndef __DEBUG__
-  initscr();
-  start_color();
+
+#ifndef __NO_GUI__
   clear();
   mvtaxicab_print(0, 0, a);
   printw("is%s a (%"PRIu64", %"PRIu64", %"PRIu64")-taxicab\n", is_taxicab(a) ? "" : " not", a.r, a.s, a.d);
@@ -156,7 +171,7 @@ int main(int argc, char **argv)
   const double p_no_latin = proba_without_latin_square(sq);
   const double p_with_latin = proba_with_latin_square(sq, a.r, a.s);
 
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
   clear();
   mvpow_m_sqr_printw(0, 0, sq);
   printw("is%s a semi magic square of %u-th powers\n", is_pow_semi_m_sqr(sq) ? "" : " not", sq.d);
@@ -168,37 +183,14 @@ int main(int argc, char **argv)
 #else
   pow_m_sqr_printf(sq);
   printf("\nis%s a semi magic square of %u-th powers\n", is_pow_semi_m_sqr(sq) ? "" : " not", sq.d);
-#endif
+
   printf("without latin squares: %e\n", p_no_latin);
   printf("with latin squares: %e\n", p_with_latin);
+#endif
 
   search_pow_m_sqr_from_taxicabs(sq, a, b);
 
-#if 0
-  // printf("%hhd\n\n", parity_of_sets(rel1, rel2, sq.n));
-
-  // const uint32_t len = 2;
-  // const uint32_t side_length = 3;
-  // latin_square *P = calloc(len, sizeof(latin_square));
-  // for (uint32_t i = 0; i < len; ++i)
-  //   latin_square_init(P + i, side_length);
-
-   uint32_t main_diag[6] = {0, 1, 2, 3, 4, 5};
-   uint32_t anti_diag[6] = {5, 4, 3, 2, 1, 0};
-
-   permute_into_pow_m_sqr(&sq, main_diag, anti_diag);
-
-   #ifndef __DEBUG__
-     clear();
-     mvpow_m_sqr_printw_highlighted(0, 0, sq, main_diag, anti_diag, COLOR_YELLOW, COLOR_CYAN);
-     printw("is%s a magic square of %u-th powers", is_pow_m_sqr(sq) ? "" : " not", sq.d);
-     getch();
-
-     endwin();
-   #endif
-#endif
-
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
   endwin();
 #endif
 

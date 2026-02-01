@@ -270,7 +270,7 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
 
   if ((mpz_get_ui(perf->counter) & 0xffffff) == 0 && mpz_cmp_ui(perf->counter, 0) != 0)
   {
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
     move(0, 0);
     clear();
 

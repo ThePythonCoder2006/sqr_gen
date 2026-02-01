@@ -5,7 +5,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "curses.h"
+#include <ncurses.h>
 #include "taxicab.h"
 // #define __PERF_COUNTER_IMPLEMENTATION__
 #include "perf_counter.h"
@@ -268,7 +268,7 @@ int test(int argc, char **argv)
   taxicab_init(&T, r, s, 2);
   find_taxicab(T);
 // reps_to_taxicab(T, result_reps);
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
   initscr();
   mvtaxicab_print(0, 0, T);
   printw("is%s a (%d, %d, 2)-taxicab\n", is_taxicab(T) ? "" : " not", r, s);

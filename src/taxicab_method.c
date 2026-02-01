@@ -1,4 +1,4 @@
-#include "curses.h"
+#include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -140,7 +140,7 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
         putchar('\n');
         printf_rel(*prev_rel, n);
         putchar('\n');
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
         clear();
         mvpow_m_sqr_printw_highlighted(0, 0, *M, *rel, *prev_rel, COLOR_YELLOW, COLOR_CYAN);
         refresh();
@@ -149,10 +149,12 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
 
         permute_into_pow_m_sqr(M, *rel, *prev_rel);
 
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
 
-        rel_item main_diag[6] = {0, 1, 2, 3, 4, 5};
-        rel_item anti_diag[6] = {5, 4, 3, 2, 1, 0};
+      /*
+      rel_item main_diag[6] = {0, 1, 2, 3, 4, 5};
+      rel_item anti_diag[6] = {5, 4, 3, 2, 1, 0};
+      */
 
         clear();
         mvpow_m_sqr_printw_highlighted(0, 0, *M, main_diag, anti_diag, COLOR_YELLOW, COLOR_CYAN);
@@ -174,6 +176,8 @@ uint8_t find_set_compatible_latin_squares_array(latin_square *P, latin_square *Q
 {
   iterate_over_latin_squares_array_pack pack = {.P = P, .Q = Q, M, .r = r, .s = s, .rels = rels, .mark = mark};
   mpz_init_set_ui(pack.perf.counter, 0);
+  mpf_init_set_ui(pack.perf.speed, 0);
+  mpf_init_set_ui(pack.perf.peak_speed, 0);
   timer_start(&pack.perf.time);
   return iterate_over_all_square_array_callback(P, r, compat_callback1, &pack);
 }
@@ -207,7 +211,7 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
   iterate_over_sets_callback(a.r, a.s, search_pow_m_sqr_from_taxicab_iterate_over_sets_callback, &pack);
 #endif
 
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
   clear();
   printw("found: %"PRIu64" sets\n", rels.count);
   // for (uint32_t k = 0; k < M.n; ++k)
@@ -242,7 +246,7 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b)
 
   da_sets mark = {.n = M.n};
   int res = !find_set_compatible_latin_squares_array(P, Q, &M, a.r, a.s, rels, mark);
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
   clear();
   move(0, 0);
   printw("was%s able to find compatible latin square from the found sets\n", res ? "" : " not");

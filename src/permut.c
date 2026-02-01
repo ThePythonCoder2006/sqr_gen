@@ -11,7 +11,7 @@
  * P must be of length r and Q of length s
  * P must hold square of size s and Q must hold squares of size r
  */
-void position_after_latin_square_permutation(uint32_t *ret_row, uint32_t *ret_col, uint32_t row, uint32_t col, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
+void position_after_latin_square_permutation(uint32_t *ret_row, uint32_t *ret_col, rel_item row, rel_item col, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
 {
   uint32_t i = row / r; // 0 <= i < s
   uint32_t j = col / s; // 0 <= j < r
@@ -76,7 +76,7 @@ void position_after_latin_square_permutation(uint32_t *ret_row, uint32_t *ret_co
   return;
 }
 
-uint8_t fall_on_different_line_after_latin_squares(uint32_t *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
+uint8_t fall_on_different_line_after_latin_squares(rel_item *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
 {
   const uint64_t n = r * s;
   uint8_t *rows = calloc(n, sizeof(uint8_t));
@@ -87,20 +87,25 @@ uint8_t fall_on_different_line_after_latin_squares(uint32_t *poses, latin_square
     exit(1);
   }
 
+  int retval = 1;
   for (uint64_t i = 0; i < n; ++i)
   {
     // printf("[2] %u, %u\n", poses[i].i, poses[i].j);
     uint32_t new_row = 0, new_col = 0;
     position_after_latin_square_permutation(&new_row, &new_col, i, poses[i], P, Q, r, s);
     if (rows[new_row] || cols[new_col])
-      return 0;
+    {
+      retval = 0;
+      goto ret;
+    }
     rows[new_row] = 1;
     cols[new_col] = 1;
   }
 
+ret:
   free(rows);
   free(cols);
-  return 1;
+  return retval;
 }
 
 void printf_rel(rel_item *rel, const size_t n)
@@ -329,8 +334,11 @@ void pow_m_sqr_from_highlighted_square(pow_m_sqr *ret, rel_item *rel1, rel_item 
   memcpy(ret->cols, M->cols, ret->n * sizeof(*ret->cols));
   memcpy(ret->rows, M->rows, ret->n * sizeof(*ret->rows));
 
-  memset(rel1, 0, n * sizeof(*rel1));
-  memset(rel2, 0, n * sizeof(*rel2));
+  if (rel1 != NULL && rel2 != NULL)
+  {
+    memset(rel1, 0, n * sizeof(*rel1));
+    memset(rel2, 0, n * sizeof(*rel2));
+  }
 
   for (uint32_t i = 0; i < ret->n; ++i)
     for (uint32_t j = 0; j < ret->n; ++j)
@@ -338,11 +346,14 @@ void pow_m_sqr_from_highlighted_square(pow_m_sqr *ret, rel_item *rel1, rel_item 
       // this has to be GET_AS_MAT and NOT M_SQR_GET_AS_MAT because of rows and cols, the permutation would be all wrong
       GET_AS_MAT(ret->arr, i, j, ret->n) = GET_AS_MAT(M->arr, i, j, M->n).val;
 
-      // this on the other hand has to M_SQR_GET_AS_MAT as we want to use the permutation
-      if (M_SQR_GET_AS_MAT(*M, i, j).colour == 1)
-        rel1[i] = j;
-      if (M_SQR_GET_AS_MAT(*M, i, j).colour == 2)
-        rel2[i] = j;
+      if (rel1 != NULL && rel2 != NULL)
+      {
+        // this on the other hand has to M_SQR_GET_AS_MAT as we want to use the permutation
+        if (M_SQR_GET_AS_MAT(*M, i, j).colour == 1)
+          rel1[i] = j;
+        if (M_SQR_GET_AS_MAT(*M, i, j).colour == 2)
+          rel2[i] = j;
+      }
     }
 
   return;

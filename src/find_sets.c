@@ -31,7 +31,8 @@
 
 #include "perf_counter.h"
 
-#include "curses.h"
+#include <ncurses.h>
+#include "taxicab_method.h"
 
 // forward declaration
 uint8_t find_sets_print_selection(uint8_t *selected, uint32_t n, void *_);
@@ -540,10 +541,7 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
   do
   {
     if (node.sum + sum != pack->mu)
-    {
-      // printf("%"PRIu64" != %"PRIu64"\n", node->sum + sum, pack->mu);
       continue;
-    }
 
     // reset the row/col sum arrays
     memcpy(pack->row_sum_copy, pack->row_sum, s * sizeof(uint32_t));
@@ -785,7 +783,7 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
       break;
     }
 
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
     if (refresh_frames == 0)
     {
       clear();
@@ -793,14 +791,12 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
       for (uint32_t i = 0; i < (n - 1 - PREFILL_CAP); ++i)
       {
         printw("%7"PRIu64"/%7"PRIu64", ", pack.tables[i].count, pack.tables[i].capacity);
-        if (i == (n - 1) / 2)
-          addch('\n');
       }
       addch('\n');
       printw("tot: %"PRIu64"/ %"PRIu64": %.2f%%\n", tables_tot_count, tables_tot_capa, 100.0 * (double) tables_tot_count / (double) tables_tot_capa);
 
       char buff[256] = {0};
-      gmp_snprintf(buff, 255, "%7"PRIu64", %Zu", tries, pack.perf.counter);
+      gmp_snprintf(buff, 255, "tries, found: %7"PRIu64", %Zu/%u", tries, pack.perf.counter, REQUIERED_SETS);
       printw("%s\n", buff);
       print_perfw(&pack.perf, "sets");
       refresh();
