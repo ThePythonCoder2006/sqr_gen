@@ -155,18 +155,18 @@ int main(int argc, char **argv)
 
   pow_semi_m_sqr_from_taxicab(sq, a, b, NULL, NULL);
 
-//   uint32_t rel1[6] = {0, 2, 5, 1, 3, 4};
-//   uint32_t rel2[6] = {3, 4, 1, 5, 0, 2};
-// #ifndef __DEBUG__
-//   clear();
-//   mvpow_m_sqr_printw_highlighted(0, 0, sq, rel1, rel2, COLOR_YELLOW, COLOR_CYAN);
-//   printw("is%s a semi magic square of %u-th powers", is_pow_semi_m_sqr(sq) ? "" : " not", sq.d);
+  /*
+  rel_item diag1[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+  rel_item diag2[12] = {11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+  rel_item inv[12], sigma[12];
 
-//   getch();
-// #else
-//   pow_m_sqr_printf(sq);
-//   printf("\nis%s a semi magic square of %u-th powers\n", is_pow_semi_m_sqr(sq) ? "" : " not", sq.d);
-// #endif
+#ifndef __NO_GUI__
+  printw("are dz: %u\n", rels_are_diagonizable(diag1, diag2, inv, sigma, 12));
+  getch();
+#else
+  printf("are dz: %u\n", rels_are_diagonizable(diag1, diag2, inv, sigma, 12));
+#endif
+  */
 
   const double p_no_latin = proba_without_latin_square(sq);
   const double p_with_latin = proba_with_latin_square(sq, a.r, a.s);

@@ -86,12 +86,14 @@ typedef struct
   uint32_t r, s;
   da_sets rels, mark;
   perf_counter perf;
+  rel_item* inv, *sigma;
+  size_t compatible_rels;
 } iterate_over_latin_squares_array_pack;
 
 void print_iterate_over_latin_squares_array_pack(iterate_over_latin_squares_array_pack *pack);
 uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data);
 uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data);
-uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark);
+uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark, rel_item* inv, rel_item* sigma, size_t* compatible_rels);
 
 // start the search on Q
 uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data)
@@ -105,23 +107,25 @@ uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data)
 {
   (void)_1, (void)_2;
   iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
-#ifndef __DEBUG__
+#ifndef __NO_GUI__
   clear();
   move(0, 0);
   char buff[256] = {0};
   gmp_snprintf(buff, 255, "%Zu arrays of latin squares tested so far", pack->perf.counter);
   printw("%s\n", buff);
   print_perfw(&pack->perf, "arrays of latin squares");
+  addch('\n');
+  printw("compatible rels: %zu\n", pack->compatible_rels);
   refresh();
 #endif
   mpz_add_ui(pack->perf.counter, pack->perf.counter, 1);
-  return !check_for_compatibility_in_latin_squares(pack->P, pack->Q, pack->M, pack->r, pack->s, pack->rels, pack->mark);
+  return !check_for_compatibility_in_latin_squares(pack->P, pack->Q, pack->M, pack->r, pack->s, pack->rels, pack->mark, pack->inv, pack->sigma, &pack->compatible_rels);
 }
 
 /*
  * returns non-zero iff two compatible sets exist within the latin_square provided
  */
-uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark)
+uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark, rel_item* inv, rel_item* sigma, size_t* compatible_rels)
 {
   const uint64_t n = r * s;
 
@@ -132,22 +136,29 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
 
     da_foreach(rel_item *, prev_rel, &mark)
     {
-      if (rels_are_compatible(*rel, *prev_rel, n))
-      {
-        // we found two non-colliding correct sets: success !!
-        printf("YAAAAAAAAAAAAAAAAAAAAAAY!!!!!!!!!!!!!\n");
-        printf_rel(*rel, n);
-        putchar('\n');
-        printf_rel(*prev_rel, n);
-        putchar('\n');
+      if (!rels_are_compatible(*rel, *prev_rel, n))
+        continue;
+
+      ++(*compatible_rels);
+
+      if (!rels_are_diagonizable(*rel, *prev_rel, inv, sigma, n))
+        continue;
+
+      // we found two non-colliding correct sets: success !!
+      printf("YAAAAAAAAAAAAAAAAAAAAAAY!!!!!!!!!!!!!\n");
+      printf_rel(*rel, n);
+      putchar('\n');
+      printf_rel(*prev_rel, n);
+      putchar('\n');
 #ifndef __NO_GUI__
-        clear();
-        mvpow_m_sqr_printw_highlighted(0, 0, *M, *rel, *prev_rel, COLOR_YELLOW, COLOR_CYAN);
-        refresh();
-        getch();
+      clear();
+      mvpow_m_sqr_printw_highlighted(0, 0, *M, *rel, *prev_rel, COLOR_YELLOW, COLOR_CYAN);
+
+      refresh();
+      getch();
 #endif
 
-        permute_into_pow_m_sqr(M, *rel, *prev_rel);
+      permute_into_pow_m_sqr(M, *rel, *prev_rel);
 
 #ifndef __NO_GUI__
 
@@ -156,15 +167,14 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
       rel_item anti_diag[6] = {5, 4, 3, 2, 1, 0};
       */
 
-        clear();
-        mvpow_m_sqr_printw_highlighted(0, 0, *M, main_diag, anti_diag, COLOR_YELLOW, COLOR_CYAN);
-        printw("is%s a magic square of %u-th powers", is_pow_m_sqr(*M) ? "" : " not", M->d);
-        getch();
+      clear();
+      mvpow_m_sqr_printw_highlighted(0, 0, *M, *rel, *prev_rel, COLOR_YELLOW, COLOR_CYAN);
+      printw("is%s a magic square of %u-th powers", is_pow_m_sqr(*M) ? "" : " not", M->d);
+      getch();
 
-        endwin();
+      endwin();
 #endif
-        return 1; // quit the search
-      }
+      return 1; // quit the search
     }
     da_append(&mark, *rel);
   }
@@ -174,12 +184,28 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
 
 uint8_t find_set_compatible_latin_squares_array(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark)
 {
+  const size_t n = r * s;
+
   iterate_over_latin_squares_array_pack pack = {.P = P, .Q = Q, M, .r = r, .s = s, .rels = rels, .mark = mark};
   mpz_init_set_ui(pack.perf.counter, 0);
   mpf_init_set_ui(pack.perf.speed, 0);
   mpf_init_set_ui(pack.perf.peak_speed, 0);
   timer_start(&pack.perf.time);
-  return iterate_over_all_square_array_callback(P, r, compat_callback1, &pack);
+  pack.compatible_rels = 0;
+
+  pack.inv = calloc(n, sizeof(rel_item));
+  pack.sigma = calloc(n, sizeof(rel_item));
+  if (pack.inv == NULL || pack.sigma == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  uint8_t ret = iterate_over_all_square_array_callback(P, r, compat_callback1, &pack);
+
+  free(pack.inv);
+  free(pack.sigma);
+  return ret;
 }
 
 typedef struct

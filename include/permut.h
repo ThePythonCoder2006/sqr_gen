@@ -12,5 +12,6 @@ void permute_into_pow_m_sqr(pow_m_sqr *M, rel_item *diag1, rel_item *diag2);
 uint8_t rels_are_disjoint(rel_item *rel1, rel_item *rel2, const size_t n);
 uint8_t rels_are_compatible(rel_item *rel1, rel_item *rel2, const size_t n);
 void printf_rel(rel_item *rel, const size_t n);
+uint8_t rels_are_diagonizable(rel_item* rel1, rel_item* rel2, rel_item* rel1_inv, rel_item* sigma, size_t n);
 
 #endif // __PERMUT__

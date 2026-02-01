@@ -174,6 +174,10 @@ uint8_t rels_are_compatible(rel_item *rel1, rel_item *rel2, const size_t n)
   return top_count == n / 2;
 }
 
+typedef struct rel_item_pair_s{
+  size_t x, y;
+} rel_item_pair;
+
 /*
  * diag[i] must be the column of the element of the set on line i
  * modifies M
@@ -186,82 +190,65 @@ void permute_into_pow_m_sqr(pow_m_sqr *M, rel_item *diag1, rel_item *diag2)
   highlighted_square_init(&H, n, M->d);
   highlighted_square_from_pow_m_sqr(&H, M, diag1, diag2);
 
-  rel_item *rel1 = calloc(n, sizeof(rel_item));
-  rel_item *rel2 = calloc(n, sizeof(rel_item));
+  rel_item* diag1_inv = calloc(n, sizeof(rel_item));
+  rel_item* sigma = calloc(n, sizeof(rel_item));
+  uint8_t* visited = calloc(n, sizeof(uint8_t));
+  rel_item_pair* pairs = calloc(n / 2, sizeof(rel_item_pair));
 
-  if (rel1 == NULL || rel2 == NULL)
+  if (diag1_inv == NULL || sigma == NULL || visited == NULL || pairs == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
     exit(1); 
   }
 
-  // fix the main diag
-  for (uint32_t i = 0; i < n; ++i)
+  // preform the main diag
+  for (size_t i = 0; i < n; ++i)
+    diag1_inv[diag1[i]] = i;
+
+  for (size_t i = 0; i < n; ++i)
+    sigma[i] = diag1_inv[diag2[i]];
+
+  // decompose sigma in transpositions
+  size_t k = 0;
+  size_t center = -1;
+  for (size_t i = 0; i < n; ++i)
   {
-    rels_from_highlighted_square(rel1, rel2, &H);
-    uint32_t col = rel1[i];
-    // swap columns i and rel1[i]
-    uint32_t t = H.cols[i];
-    H.cols[i] = H.cols[col];
-    H.cols[col] = t;
+    if (visited[i])
+      continue;
+    size_t j = sigma[i];
+    visited[i] = 1;
+    visited[j] = 1;
+    if (i == j)
+      center = i;
+    else
+      pairs[k++] = (rel_item_pair){.x=i, .y=j};
   }
 
-  // fix the anti-diag
-  for (uint32_t i = 0; i < n; ++i)
+  // organize the pairs in the permutation
+  size_t left = 0, right = n - 1;
+  for (k = 0; k < n/2; ++k)
   {
-    rels_from_highlighted_square(rel1, rel2, &H);
-    uint32_t col = (n - 1) - rel2[i];
-
-    // swap columns i and col
-    uint32_t t = H.cols[i];
-    H.cols[i] = H.cols[col];
-    H.cols[col] = t;
-
-    // swap rows i and col to fix the main diag we modified on the first swap
-    t = H.rows[i];
-    H.rows[i] = H.rows[col];
-    H.rows[col] = t;
+    H.rows[pairs[k].x] = left++;
+    H.rows[pairs[k].y] = right--;
   }
 
-  // rel1 and rel2 are here by pure formality, we dont use them afterwards
-  // this could be optimized by making a new function but I'm optimizing my time by not writing it...
-  pow_m_sqr_from_highlighted_square(M, rel1, rel2, &H);
+  if (center > 0)
+    H.rows[center] = left;
 
-  free(rel1);
-  free(rel2);
+  // C = R o diag1^-1
+  for (size_t i = 0; i < n; ++i)
+    H.cols[i] = H.rows[diag1_inv[i]];
+
+
+  pow_m_sqr_from_highlighted_square(M, NULL, NULL, &H);
+
+  free(diag1_inv);
+  free(sigma);
+  free(visited);
+  free(pairs);
   highlighted_square_clear(&H);
 
   return;
-}
-
-/*
- * returns the parity of the permutation changing the two sets, rel1 and rel2, into the two main diags
- */
-int8_t parity_of_sets(uint32_t *rel1, uint32_t *rel2, const size_t n)
-{
-  int8_t ret = 1;
-
-  for (size_t i = 0; i < n; ++i)
-  {
-    if (rel1[i] != i)
-    {
-      // will need to be transposed
-      ret *= -1;
-      // printf("(%u %u)", rel1[idx].i, rel1[idx].j);
-    }
-
-    // indices go from 0 to (n - 1)
-    if (rel2[i] != i)
-    {
-      // will need to be transposed
-      ret *= -1;
-      // printf("(%u %u)", rel2[idx].i, (uint32_t)(n - 1) - rel2[idx].j);
-    }
-  }
-
-  // putchar('\n');
-
-  return ret;
 }
 
 void highlighted_square_init(highlighted_square *ret, const uint32_t n, const uint32_t d)
@@ -374,5 +361,27 @@ void rels_from_highlighted_square(rel_item *rel1, rel_item *rel2, const highligh
     }
 
   return;
+}
+
+/*
+ * rel1, rel2, rel1_inv MUST be at least n elements long
+ */
+uint8_t rels_are_diagonizable(rel_item* rel1, rel_item* rel2, rel_item* rel1_inv, rel_item* sigma, size_t n)
+{
+  for (size_t i = 0; i < n; ++i)
+    rel1_inv[rel1[i]] = i;
+
+  for (size_t i = 0; i < n; ++i)
+    sigma[i] = rel1_inv[rel2[i]];
+
+  size_t fixed = 0;
+  for (size_t i = 0; i < n; ++i)
+  {
+    if (sigma[sigma[i]] != i)
+      return 0;
+    fixed += (sigma[i] == i);
+  }
+
+  return fixed == (n % 2);
 }
 
