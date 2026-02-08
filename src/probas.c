@@ -11,6 +11,8 @@
 
 #include "gmp.h"
 
+#define PI 3.1415926535897932384626
+
 const uint32_t list_of_primes[] = {
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
     73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167};// , 173};
@@ -33,7 +35,7 @@ const uint64_t A000479[] = {1ULL, 1ULL, 1ULL, 2ULL, 24ULL, 1344ULL, 1128960ULL, 
 double p_magic(uint64_t m, uint64_t n, double c)
 {
   // p_magic = n / (2 pi c^2 m^2)
-  return ((double)n) / ((double)2 * M_PI * c * c * (double)m * (double)m);
+  return ((double)n) / ((double)2 * PI * c * c * (double)m * (double)m);
 }
 
 // Computes (base^exp) % mod using modular exponentiation

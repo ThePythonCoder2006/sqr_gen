@@ -19,12 +19,20 @@ Cmd cmd = {0};
 File_Paths deps = {0};
 bool debug = false;
 bool no_gui = false;
+bool flush_tables = true;
+int64_t count = -1;
+bool unit = false;
 
 void usage(FILE* stream)
 {
-  fprintf(stream, "Usage: ./nob [OPTIONS]\n");
+  fprintf(stream, "Usage: ./nob [OPTIONS] [TYPE] [COUNT]\n");
   fprintf(stream, "OPTIONS:\n");
   flag_print_options(stream);
+  fprintf(stream, "TYPE:\n"
+                  "* leave empty for release\n"
+                  "* db: build with debug symbols (alias for -debug)\n"
+      );
+  fprintf(stream, "COUNT: integer: number of tuples to find\n");
 
   return;
 }
@@ -41,6 +49,8 @@ int cc_flags(void)
     cmd_append(&cmd, "-O3");
   if (no_gui)
     cmd_append(&cmd, "-D__NO_GUI__");
+  if (flush_tables)
+    cmd_append(&cmd, "-D__TABLE_FLUSHING__");
 
   return 1;
 }
@@ -53,6 +63,7 @@ int l_flags(void)
   cmd_append(&cmd, "-lm");
   cmd_append(&cmd, "-lcurses");
   cmd_append(&cmd, "-lgmp");
+  cmd_append(&cmd, "-pthread");
 
   return 1;
 }
@@ -72,6 +83,8 @@ int main(int argc, char** argv)
   flag_bool_var(&debug, "debug", false, "enables debug build");
   flag_bool_var(&no_gui, "no-gui", false, "disables the curses based GUI");
   bool* run = flag_bool("run", false, "executes the build");
+  flag_bool_var(&flush_tables, "flush-tables", true, "enables \"experimental\" table flushing behaviour when no more rels have been found in a long time");
+  flag_bool_var(&unit, "unit", false, "builds and runs unit tests");
 
   if (!flag_parse(argc, argv))
   {
@@ -83,12 +96,15 @@ int main(int argc, char** argv)
   argc = flag_rest_argc();
   argv = flag_rest_argv();
 
-  while (argc > 0)
+  if (argc > 0)
   {
     const char* arg = shift(argv, argc);
 
     if (strcmp(arg, "db") == 0)
       debug = true;
+    
+    // arg MUST be a number
+    count = atoi(arg);
   }
 
   if (*help)
@@ -102,18 +118,38 @@ int main(int argc, char** argv)
 
   if (!mkdir_if_not_exists(BINDIR)) return 1;
   if (!mkdir_if_not_exists(odir)) return 1;
+  if (!mkdir_if_not_exists("output")) return 1;
 
   da_append(&deps, "nob.c");
   walk_dir(IDIR, append_h_to_deps);
 
-  walk_dir(SRCDIR, c_to_o);
+  if (!walk_dir(SRCDIR, c_to_o)) return 1;
   cmd_append(&cmd, "gcc");
-  walk_dir(odir, o_to_elf);
+  if (!walk_dir(odir, o_to_elf)) return 1;
+  cmd_append(&cmd, temp_sprintf("%smain.o", odir));
   cmd_append(&cmd, "-o", trgt);
   cc_flags(); 
   l_flags();
 
   if (!cmd_run(&cmd)) return 1;
+
+  if (unit)
+  {
+    cmd_append(&cmd, "gcc");
+    cmd_append(&cmd, "src/unit/test.c");
+    if (!walk_dir(odir, o_to_elf)) return 1;
+    cmd_append(&cmd, "-o", BINDIR"unit_test");
+    cc_flags();
+    l_flags();
+
+    if(!cmd_run(&cmd)) return 1;
+
+    cmd_append(&cmd, BINDIR"unit_test");
+
+    if(!cmd_run(&cmd)) return 1;
+
+    return 0;
+  }
 
   if (!*run) return 0;
 
@@ -121,6 +157,8 @@ int main(int argc, char** argv)
     cmd_append(&cmd, "gdb");
 
   cmd_append(&cmd, trgt);
+  if (count > 0)
+    cmd_append(&cmd, temp_sprintf("%"PRId64, count));
   if (!cmd_run(&cmd)) return 1;
 
   return 0;
@@ -195,7 +233,8 @@ bool o_to_elf(Nob_Walk_Entry entry)
     return true;
   }
 
-  cmd_append(&cmd, strdup(entry.path));
+  if (!nob_sv_end_with(nob_sv_from_cstr(entry.path), "main.o"))
+    cmd_append(&cmd, strdup(entry.path));
 
   return true;
 }

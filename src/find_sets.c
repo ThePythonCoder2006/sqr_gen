@@ -32,7 +32,6 @@
 #include "perf_counter.h"
 
 #include <ncurses.h>
-#include "taxicab_method.h"
 
 // forward declaration
 uint8_t find_sets_print_selection(uint8_t *selected, uint32_t n, void *_);
@@ -80,8 +79,7 @@ void iterate_over_sets_callback(uint32_t r, uint32_t s, set_callback f, void *da
   d.sum_col = calloc(r, sizeof(uint32_t));
   /*
    * There are s block rows of height r
-   * for all i in {0; ...; s}
-   * sum_row[i] = the numbers of entries selected in the block row i
+   * for all i in {0; ...; s} * sum_row[i] = the numbers of entries selected in the block row i
    */
   d.sum_row = calloc(s, sizeof(uint32_t));
 
@@ -144,6 +142,8 @@ uint8_t iterate_over_sets_callback_inside(sets_search_data *d, uint32_t current_
 
 #define HSHTBL_BASE_SIZE (1024)
 #define HSHTBL_FULLNESS_RATIO (0.7)
+#define HSHTBL_MAX_FULLNESS_RATIO (0.92)
+#define HSHTBL_MAX_SIZE ((1<<26) - 1)
 
 typedef struct hshtbl_node_s
 {
@@ -189,15 +189,25 @@ hshtbl *init_hshtbls(const uint32_t n)
   return table;
 }
 
-void free_hshtbl(hshtbl *table)
+void empty_hshtbl(hshtbl *table)
 {
   for (uint32_t i = 0; i < table->capacity; i++)
     if (table->arr[i].items != NULL)
       free(table->arr[i].items);
+
+  table->count = 0;
+
+  return;
+}
+
+void free_hshtbl(hshtbl *table)
+{
+  empty_hshtbl(table);
   free(table->arr);
   table->arr = NULL;
   return;
 }
+
 
 void free_hshtbls(hshtbl *table, const uint32_t n)
 {
@@ -243,13 +253,17 @@ uint8_t sets_equal_items_selected(const rel_item *set1_items, const uint8_t *set
 
 void hshtbl_resize(hshtbl* table)
 {
+  // stop increasing table size
+  if (table->capacity >= HSHTBL_MAX_SIZE) return;
+
+  // table not full
   if (table->count <= table->capacity * HSHTBL_FULLNESS_RATIO)
     return;
 
   const size_t prev_capa = table->capacity;
 
   while (table->count > table->capacity * HSHTBL_FULLNESS_RATIO)
-    table->capacity *= 2;
+    table->capacity *= 2ULL;
 
   hshtbl_node* bigger = calloc(table->capacity, sizeof(table->arr[0]));
   if (bigger == NULL)
@@ -276,12 +290,22 @@ void hshtbl_resize(hshtbl* table)
   return;
 }
 
+enum HSHTBL_STATUS
+{
+  HSHTBL_OK,
+  HSHTBL_FULL,
+  HSHTBL_STATUS_COUNT,
+};
+
 /*
  * modifies table
  * items and selected are different representations of the same data
  */
-void hshtbl_insert(hshtbl *table, const rel_item *items, const uint8_t *selected, const uint32_t count, const uint64_t sum, const uint64_t n)
+uint8_t hshtbl_insert(hshtbl *table, const rel_item *items, const uint8_t *selected, const uint32_t count, const uint64_t sum, const uint64_t n)
 {
+  if (table->count > HSHTBL_MAX_FULLNESS_RATIO * table->capacity)
+    return HSHTBL_FULL;
+
   uint64_t h = hash_func(sum) % table->capacity;
 
   // there should always be space in the hshtbl has its occupancy must never be above HSHTBL_FULLNESS_RATIO
@@ -289,7 +313,7 @@ void hshtbl_insert(hshtbl *table, const rel_item *items, const uint8_t *selected
   while (node.items)
   {
     if (sets_equal_items_selected(node.items, selected, count, n))
-      return; // duplicate
+      return HSHTBL_OK; // duplicate
     h = (h + 1) % table->capacity;
     node = table->arr[h];
   };
@@ -308,7 +332,7 @@ void hshtbl_insert(hshtbl *table, const rel_item *items, const uint8_t *selected
 
   hshtbl_resize(table);
 
-  return;
+  return HSHTBL_OK;
 }
 
 void prefill_hshtbls_inside(hshtbl* tables, pow_m_sqr M, rel_item* rel, uint8_t* selected, size_t p, size_t mu, size_t n, size_t k)
@@ -353,6 +377,20 @@ void prefill_hshtbls(hshtbl* tables, pow_m_sqr M, size_t n, size_t k)
   return;
 }
 
+enum regime_e
+{
+  REGIME_PREFILL,
+  REGIME_FILL,
+  REGIME_FULL,
+  REGIME_COUNT,
+};
+
+typedef struct regime_data_s
+{
+  double start_time, tot_time;
+  mpf_t speed, peak_speed, peak_local_speed;
+} regime_data;
+
 typedef struct
 {
   uint64_t mu;
@@ -367,7 +405,8 @@ typedef struct
   // they are both array of size r * s = s * r = n
   uint32_t *open_blocs;
   uint32_t *open_entries_in_bloc;
-  perf_counter perf;
+  uint8_t regime;
+  regime_data time_data[REGIME_COUNT];
 } state;
 
 void init_state(state *pack, pow_m_sqr* M, const uint32_t r, const uint32_t s)
@@ -397,13 +436,11 @@ void init_state(state *pack, pow_m_sqr* M, const uint32_t r, const uint32_t s)
     exit(1);
   }
 
-  timer_start(&pack->perf.time);
-  mpz_init_set_ui(pack->perf.counter, 0);
-  mpf_init_set_ui(pack->perf.time_, 0);
-  mpf_init_set_ui(pack->perf.speed, 0);
-  mpf_init_set_ui(pack->perf.peak_speed, 0);
+  pack->regime = REGIME_PREFILL;
 
   prefill_hshtbls(pack->tables, *pack->M, n, PREFILL_CAP);
+
+  pack->regime = REGIME_FILL;
 
   return;
 }
@@ -441,10 +478,6 @@ void free_state(state pack, const uint32_t r, const uint32_t s)
   free_hshtbls(pack.tables, r * s);
   free_hshtbl(&pack.found);
 
-  mpz_clear(pack.perf.counter);
-  mpf_clear(pack.perf.time_);
-  mpf_clear(pack.perf.speed);
-  (void)timer_stop(&pack.perf.time);
   return;
 }
 
@@ -566,7 +599,7 @@ enum SET_SEARCH_RETVALS
  * |> zero if nothing was found
  * |> positive if a collision was found
  */
-int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum, const uint32_t r, const uint32_t s, const uint32_t count, set_callback f, void *data)
+int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum, const uint32_t r, const uint32_t s, const uint32_t count, perf_counter perf, set_callback f, void *data)
 {
   const uint32_t n = r * s;
 
@@ -613,7 +646,8 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
     if (!is_in_hshtbl(pack->found, pack->items2, n))
     {
       retval = COLLISION_FOUND;
-      mpz_add_ui(pack->perf.counter, pack->perf.counter, 1); // add to number of found sets
+      mpz_add_ui(perf.counter, perf.counter, 1); // add to number of found sets
+      mpz_add_ui(perf.lcounter, perf.lcounter, 1); // add to number of found sets
       if (!(*f)(pack->selected, n, data))
       {
         retval = SIGSTOP;
@@ -664,7 +698,7 @@ uint8_t set_has_magic_sum(const uint8_t *selected, const pow_m_sqr M)
  *
  * calls back only when set has magic value, in contrast with iterate_over_sets
  */
-int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
+int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const uint32_t r, const uint32_t s, perf_counter perf, set_callback f, void *data)
 {
   const uint64_t n = r * s;
 
@@ -720,12 +754,13 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
 
     sum += ui_pow_ui(M_SQR_GET_AS_VEC(M, selected_entry), M.d);
 
-    if (sum > pack->mu)
-      return NOT_FOUND;
-
     // printf("%u\n", count);
     if (count >= n)
       break; // we found a solution, dont insert nor check for collisions
+
+    // here count < n ie we need at least one more element which would bring the sum above mu
+    if (sum >= pack->mu)
+      return NOT_FOUND;
 
     /*
      * do not insert partial rels which are more than n/2 elements long, checking for collisions is enough
@@ -734,7 +769,7 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
     if (PREFILL_CAP < count && count <= n/2)
       hshtbl_insert(&(pack->tables[count - 1]), pack->items, pack->selected, count, sum, n); // -1 because pack->tables is zero indexed
 
-    int8_t ret = check_if_set_can_be_formed_from_collision(pack, sum, r, s, count, f, data);
+    int8_t ret = check_if_set_can_be_formed_from_collision(pack, sum, r, s, count, perf, f, data);
     if (ret > 0)
       // we found something: update retval
       retval = ret;
@@ -762,7 +797,8 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
     {
       // sum was magic
       hshtbl_insert(&pack->found, pack->items, pack->selected, n, set_items_sqared_sum(pack->items, n), n);
-      mpz_add_ui(pack->perf.counter, pack->perf.counter, 1);
+      mpz_add_ui(perf.counter, perf.counter, 1);
+      mpz_add_ui(perf.lcounter, perf.lcounter, 1);
       if (!(*f)(pack->selected, n, data))
         return SIGSTOP;
     }
@@ -774,9 +810,9 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
   return retval;
 }
 
-#define MAX_ALLOWED_TRIES (100 * 1024)
+#define MAX_ALLOWED_TRIES (100 * 1024 * 1024)
 
-void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s, set_callback f, void *data)
+void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s, size_t requiered_sets, perf_counter perf, set_callback f, void *data)
 {
   const size_t n = r * s;
 
@@ -792,13 +828,13 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
     exit(1);
   }
 
-  uint8_t refresh_frames = 0;
+  uint16_t refresh_frames = 0;
 
   int8_t ret;
   do
   {
     reset_state(&pack, r, s);
-    ret = generate_random_set_with_magic_sum(&pack, M, r, s, f, data);
+    ret = generate_random_set_with_magic_sum(&pack, M, r, s, perf, f, data);
     ++tries;
     if (ret > 0)
       tries = 0;
@@ -823,8 +859,14 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
 
     if (tries > MAX_ALLOWED_TRIES)
     {
+#ifdef __TABLE_FLUSHING__
+      tries = 0;
+      for (uint32_t k = PREFILL_CAP; k < n/2; ++k)
+        empty_hshtbl(pack.tables + k);
+#else
       fprintf(stderr, "No set (partial nor total) found for the last %u tries : aborting\n", MAX_ALLOWED_TRIES);
       break;
+#endif
     }
 
 #ifndef __NO_GUI__
@@ -840,9 +882,9 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
       printw("tot: %"PRIu64"/ %"PRIu64": %.2f%%\n", tables_tot_count, tables_tot_capa, 100.0 * (double) tables_tot_count / (double) tables_tot_capa);
 
       char buff[256] = {0};
-      gmp_snprintf(buff, 255, "tries, found: %7"PRIu64", %Zu/%u", tries, pack.perf.counter, REQUIERED_SETS);
+      gmp_snprintf(buff, 255, "tries, found: %7"PRIu64", %Zu/%u", tries, perf.counter, requiered_sets);
       printw("%s\n", buff);
-      print_perfw(&pack.perf, "sets");
+      print_perfw(&perf, "sets");
       refresh();
     }
 #else

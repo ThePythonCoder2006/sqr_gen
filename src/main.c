@@ -1,3 +1,4 @@
+#include "taxicab_method.h"
 #include <ncurses.h>
 
 #include <assert.h>
@@ -21,15 +22,22 @@
 #define __PERF_COUNTER_IMPLEMENTATION__
 #include "perf_counter.h"
 
-// #include "known/16x16x4.h"
+// #include "know/16x16x4.h"
 
 
 uint8_t print_latin_square_array(latin_square *P, uint64_t len, void *_);
 
 int main(int argc, char **argv)
 {
-  (void)argc, (void)argv;
-  // srand(time(NULL));
+  size_t requiered_sets = 0;
+
+  // shift out program name
+  nob_shift(argv, argc);
+
+  if (argc > 0)
+    requiered_sets = atoi(nob_shift(argv, argc));
+
+  srand(time(NULL));
 
 #ifndef __NO_GUI__
   initscr();
@@ -44,7 +52,7 @@ int main(int argc, char **argv)
   start_color();
 #endif
 
-  srand(69);
+  // srand(69);
 
   taxicab a = {0};
   taxicab_init(&a, 3, 4, 2);
@@ -139,15 +147,15 @@ int main(int argc, char **argv)
 #ifndef __NO_GUI__
   clear();
   mvtaxicab_print(0, 0, a);
-  printw("is%s a (%"PRIu64", %"PRIu64", %"PRIu64")-taxicab\n", is_taxicab(a) ? "" : " not", a.r, a.s, a.d);
+  printw("is%s a (%"PRIu32", %"PRIu32", %"PRIu32")-taxicab\n", is_taxicab(a) ? "" : " not", a.r, a.s, a.d);
   mvtaxicab_print(0, 30, b);
-  printw("is%s a (%"PRIu64", %"PRIu64", %"PRIu64")-taxicab\n", is_taxicab(b) ? "" : " not", b.r, b.s, b.d);
+  printw("is%s a (%"PRIu32", %"PRIu32", %"PRIu32")-taxicab\n", is_taxicab(b) ? "" : " not", b.r, b.s, b.d);
   getch();
 #else
   taxicab_printf(a);
-  printf("\nis%s a (%"PRIu64", %"PRIu64", %"PRIu64")-taxicab\n", is_taxicab(a) ? "" : " not", a.r, a.s, a.d);
+  printf("\nis%s a (%"PRIu32", %"PRIu32", %"PRIu32")-taxicab\n", is_taxicab(a) ? "" : " not", a.r, a.s, a.d);
   taxicab_printf(b);
-  printf("\nis%s a (%"PRIu64", %"PRIu64", %"PRIu64")-taxicab\n", is_taxicab(b) ? "" : " not", b.r, b.s, b.d);
+  printf("\nis%s a (%"PRIu32", %"PRIu32", %"PRIu32")-taxicab\n", is_taxicab(b) ? "" : " not", b.r, b.s, b.d);
 #endif
 
   pow_m_sqr sq = {0};
@@ -188,7 +196,7 @@ int main(int argc, char **argv)
   printf("with latin squares: %e\n", p_with_latin);
 #endif
 
-  search_pow_m_sqr_from_taxicabs(sq, a, b);
+  search_pow_m_sqr_from_taxicabs(sq, a, b, requiered_sets);
 
 #ifndef __NO_GUI__
   endwin();

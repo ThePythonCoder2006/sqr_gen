@@ -62,6 +62,10 @@ dhat.out.*
 nob.old
 nob
 
+# output files
+
+output/*
+
 # vim files
 *~
 compile_commands.json

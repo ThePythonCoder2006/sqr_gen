@@ -1,10 +1,11 @@
+#include <curses.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "latin_squares.h"
+#include "types.h"
 #include "pow_m_sqr.h"
 
 /*
@@ -76,23 +77,21 @@ void position_after_latin_square_permutation(uint32_t *ret_row, uint32_t *ret_co
   return;
 }
 
-uint8_t fall_on_different_line_after_latin_squares(rel_item *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
+/*
+ * rows and cols MUST be a n*uint8_t array
+ */
+uint8_t fall_on_different_line_after_latin_squares(uint8_t* rows, uint8_t* cols, rel_item *poses, latin_square *P, latin_square *Q, const uint32_t r, const uint32_t s)
 {
   const uint64_t n = r * s;
-  uint8_t *rows = calloc(n, sizeof(uint8_t));
-  uint8_t *cols = calloc(n, sizeof(uint8_t));
-  if (rows == NULL || cols == NULL)
-  {
-    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
-    exit(1);
-  }
 
   int retval = 1;
-  for (uint64_t i = 0; i < n; ++i)
+  for (uint64_t k = 0; k < n; ++k)
   {
-    // printf("[2] %u, %u\n", poses[i].i, poses[i].j);
+    rel_item i = poses[k] / n;
+    rel_item j = poses[k] % n;
+
     uint32_t new_row = 0, new_col = 0;
-    position_after_latin_square_permutation(&new_row, &new_col, i, poses[i], P, Q, r, s);
+    position_after_latin_square_permutation(&new_row, &new_col, i, j, P, Q, r, s);
     if (rows[new_row] || cols[new_col])
     {
       retval = 0;
@@ -103,8 +102,6 @@ uint8_t fall_on_different_line_after_latin_squares(rel_item *poses, latin_square
   }
 
 ret:
-  free(rows);
-  free(cols);
   return retval;
 }
 
@@ -179,6 +176,29 @@ typedef struct rel_item_pair_s{
 } rel_item_pair;
 
 /*
+ * rel1, rel2, rel1_inv MUST be at least n elements long
+ */
+uint8_t rels_are_diagonizable(rel_item* rel1, rel_item* rel2, rel_item* rel1_inv, rel_item* sigma, size_t n)
+{
+  for (size_t i = 0; i < n; ++i)
+    rel1_inv[rel1[i]] = i;
+
+  for (size_t i = 0; i < n; ++i)
+    sigma[i] = rel1_inv[rel2[i]];
+
+  size_t fixed = 0;
+  for (size_t i = 0; i < n; ++i)
+  {
+    if (sigma[sigma[i]] != i)
+      return 0;
+    fixed += (sigma[i] == i);
+  }
+
+  return fixed == (n % 2);
+}
+
+
+/*
  * diag[i] must be the column of the element of the set on line i
  * modifies M
  */
@@ -209,44 +229,59 @@ void permute_into_pow_m_sqr(pow_m_sqr *M, rel_item *diag1, rel_item *diag2)
     sigma[i] = diag1_inv[diag2[i]];
 
   // decompose sigma in transpositions
-  size_t k = 0;
-  size_t center = -1;
+  size_t pair_count = 0;
+  int64_t center = -1;
   for (size_t i = 0; i < n; ++i)
   {
     if (visited[i])
       continue;
     size_t j = sigma[i];
+
+    if (sigma[j] != i)
+    {
+      fprintf(stderr, "[ERROR] sigma was not an involution!!\n");
+      exit(1);
+    }
+
     visited[i] = 1;
     visited[j] = 1;
     if (i == j)
       center = i;
     else
-      pairs[k++] = (rel_item_pair){.x=i, .y=j};
+      pairs[pair_count++] = (rel_item_pair){.x=i, .y=j};
+  }
+
+  if (pair_count != n/2)
+  {
+    fprintf(stderr, "[ERROR] wrong number of fixed points!!\n");
+    exit(1);
   }
 
   // organize the pairs in the permutation
   size_t left = 0, right = n - 1;
-  for (k = 0; k < n/2; ++k)
+  for (size_t k = 0; k < pair_count; ++k)
   {
-    H.rows[pairs[k].x] = left++;
-    H.rows[pairs[k].y] = right--;
+    H.rows[left++] = pairs[k].x;
+    H.rows[right--] = pairs[k].y;
   }
 
   if (center > 0)
-    H.rows[center] = left;
+    H.rows[left] = center;
 
   // C = R o diag1^-1
   for (size_t i = 0; i < n; ++i)
-    H.cols[i] = H.rows[diag1_inv[i]];
+    H.cols[i] = diag1[H.rows[i]];
 
-
+  // mvhighlighted_square_printw(0, 0, H, COLOR_BLUE, COLOR_YELLOW);
   pow_m_sqr_from_highlighted_square(M, NULL, NULL, &H);
+  getch();
+
+  highlighted_square_clear(&H);
 
   free(diag1_inv);
   free(sigma);
   free(visited);
   free(pairs);
-  highlighted_square_clear(&H);
 
   return;
 }
@@ -363,25 +398,36 @@ void rels_from_highlighted_square(rel_item *rel1, rel_item *rel2, const highligh
   return;
 }
 
-/*
- * rel1, rel2, rel1_inv MUST be at least n elements long
- */
-uint8_t rels_are_diagonizable(rel_item* rel1, rel_item* rel2, rel_item* rel1_inv, rel_item* sigma, size_t n)
+void pos_rel_to_x_y_rel(x_y_rel ret, pos_rel op, const size_t n)
 {
-  for (size_t i = 0; i < n; ++i)
-    rel1_inv[rel1[i]] = i;
-
-  for (size_t i = 0; i < n; ++i)
-    sigma[i] = rel1_inv[rel2[i]];
-
-  size_t fixed = 0;
-  for (size_t i = 0; i < n; ++i)
+  for (size_t k = 0; k < n; ++k)
   {
-    if (sigma[sigma[i]] != i)
-      return 0;
-    fixed += (sigma[i] == i);
+    rel_item i = op[k] / n;
+    rel_item j = op[k] % n;
+    ret[i] = j;
   }
 
-  return fixed == (n % 2);
+  return;
 }
 
+/*
+ * P must be of length r and Q of length s
+ * P must hold square of size s and Q must hold squares of size r
+ * pos_rel MUST fall on different rows after latin squares
+ */
+void x_y_rel_after_latin_squares(x_y_rel ret, pos_rel op, latin_square* P, latin_square* Q, const size_t r, const size_t s)
+{
+  const size_t n = r * s;
+  for (size_t k = 0; k < n; ++k)
+  {
+    rel_item i = op[k] / n;
+    rel_item j = op[k] % n;
+
+    uint32_t new_row, new_col;
+    position_after_latin_square_permutation(&new_row, &new_col, i, j, P, Q, r, s);
+
+    ret[new_row] = new_col;
+  }
+
+  return;
+}

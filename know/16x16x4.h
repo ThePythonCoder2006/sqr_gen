@@ -1,26 +1,46 @@
 #include <stdint.h>
+#include <string.h>
 
+#include "pow_m_sqr.h"
 #include "taxicab.h"
 #include "latin_squares.h"
 
 const uint64_t r = 4, s = 4, d = 4;
 
-uint64_t a_arr[] = {  2, 21, 29, 32,
+uint32_t a_arr[] = {  2, 21, 29, 32,
                       7, 23, 24, 34,
                       8,  9, 16, 37,
                     14, 26, 27, 31
 };
 
-taxicab a = {.d = d, .r = r, .s = s, .arr = a_arr};
+// taxicab a = {.d = d, .r = r, .s = s, .arr = a_arr};
 
-uint64_t b_arr[] = { 3, 85,  97, 116,
+void load_a(taxicab* a)
+{
+  a->d = d;
+  a->r = r;
+  a->s = s;
+  memcpy(a->arr, a_arr, sizeof(*a->arr) * r * s);
+  return;
+}
+
+uint32_t b_arr[] = { 3, 85,  97, 116,
                     23, 25,  98, 123,
                     43, 81,  95, 118,
                     45, 73, 106, 113
    };
 
 // b has transposed dimentions from a
-taxicab b = {.d = d, .r = s, .s = r, .arr = b_arr};
+// taxicab b = {.d = d, .r = s, .s = r, .arr = b_arr};
+
+void load_b(taxicab* b)
+{
+  b->d = d;
+  b->r = s;
+  b->s = r;
+  memcpy(b->arr, b_arr, sizeof(*b->arr) * r * s);
+  return;
+}
 
 uint8_t P_0_arr[] = {0, 1, 2, 3,
                      3, 2, 1, 0,
@@ -84,3 +104,7 @@ latin_square Q[] = {
   (latin_square){.n = r, .arr = Q_2_arr},
   (latin_square){.n = r, .arr = Q_3_arr}
 };
+
+rel_item rel1[] = {7, 8, 9, 14, 6, 3, 5, 11, 12, 13, 0, 2, 10, 1, 4, 15};
+rel_item rel2[] = {12, 10, 6, 0, 9, 11, 2, 3, 7, 4, 14, 5, 8, 15, 13, 1};
+

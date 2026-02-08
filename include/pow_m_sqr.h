@@ -5,27 +5,8 @@
 
 #include "perf_counter.h"
 #include "taxicab.h"
-#include "latin_squares.h"
 
-typedef struct pow_m_sqr_s
-{
-  uint32_t n, d;
-  uint32_t *rows, *cols;
-  uint64_t *arr;
-} pow_m_sqr;
-
-typedef struct highlighted_square_s
-{
-  uint32_t n, d;
-  uint32_t *rows, *cols;
-  struct highlighted_val_s
-  {
-    uint64_t val;
-    uint8_t colour;
-  } *arr;
-} highlighted_square;
-
-typedef uint8_t rel_item;
+#include "types.h"
 
 // will evalutate `M` multiple times !!
 #define M_SQR_GET_AS_MAT(M, i, j) ((M).arr[((M).rows[(i)]) * ((M).n) + ((M).cols[(j)])])
@@ -65,7 +46,6 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
 void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square *P, latin_square *Q);
 void search_pow_m_sqr_from_pow_semi_m_sqr(pow_m_sqr M);
 void generate_siamese(pow_m_sqr M);
-void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b);
 int8_t parity_of_sets(uint32_t *rel1, uint32_t *rel2, const uint64_t n);
 
 /* ------------ latin squares ---------------- */

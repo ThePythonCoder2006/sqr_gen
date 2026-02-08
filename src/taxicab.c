@@ -119,11 +119,6 @@ ret:
   return retval;
 }
 
-// uint8_t is_pow_m_sqr(pow_m_sqr M)
-// {
-//   return check_sums(M) && pow_m_sqr_is_distinct(M);
-// }
-
 /*
  * allocates arr and zero initialises it
  */

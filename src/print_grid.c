@@ -133,12 +133,12 @@ size_t taxi_max_col_width(size_t *max, size_t *width, taxicab T)
   for (uint64_t j = 0; j < T.s; ++j)
     for (uint64_t i = 0; i < T.r; ++i)
     {
-      size_t l = snprintf(buff, 31, "%"PRIu64"", TAXI_GET_AS_MAT(T, i, j));
+      size_t l = snprintf(buff, 31, "%"PRIu32"", TAXI_GET_AS_MAT(T, i, j));
       if (l > max[j])
         max[j] = l;
     }
 
-  size_t dwidth = snprintf(buff, 31, "%"PRIu64"", T.d);
+  size_t dwidth = snprintf(buff, 31, "%"PRIu32"", T.d);
 
   *width = 1; // start '|'
 
@@ -322,7 +322,8 @@ void mvhighlighted_square_printw(int y0, int x0, highlighted_square M, int BG_CO
         attron(COLOR_PAIR(1));
       else if (M_SQR_GET_AS_MAT(M, i, j).colour == 2)
         attron(COLOR_PAIR(2));
-      x += mvprintw(y, x, "%*u", (int)max[j] + 1, M.d);
+      mvprintw(y, x, "%*u", (int)max[j] + 1, M.d);
+      x += max[j] + 1;
       attroff(COLOR_PAIR(1));
       attroff(COLOR_PAIR(2));
       if (i == 0)
@@ -372,10 +373,12 @@ void mvhighlighted_square_printw(int y0, int x0, highlighted_square M, int BG_CO
         attron(COLOR_PAIR(1));
       else if (M_SQR_GET_AS_MAT(M, i, j).colour == 2)
         attron(COLOR_PAIR(2));
-      x += mvprintw(y, x, "%*"PRIu64"", (int)max[j], M_SQR_GET_AS_MAT(M, i, j).val);
-      // x += dwidth + 1; // +1 for vertical seperator
+      mvprintw(y, x, "%*"PRIu64"", (int)max[j], M_SQR_GET_AS_MAT(M, i, j).val);
+      x += max[j];
+
       for (uint32_t _ = 0; _ < dwidth; ++_)
-        x += mvprintw(y, x, " ");
+        mvprintw(y, x, " ");
+      x += dwidth;
       ++x; // for vertical separator
       attroff(COLOR_PAIR(1));
       attroff(COLOR_PAIR(2));
@@ -419,7 +422,7 @@ void mvtaxicab_print(int y0, int x0, taxicab T)
     for (uint64_t j = 0; j < T.s; ++j)
     {
       x += max[j];
-      mvprintw(y, x, "%"PRIu64"", T.d);
+      mvprintw(y, x, "%"PRIu32"", T.d);
       x += dwidth;
       if (i == 0)
       {
@@ -464,7 +467,7 @@ void mvtaxicab_print(int y0, int x0, taxicab T)
 
     for (uint64_t j = 0; j < T.s; ++j)
     {
-      mvprintw(y, x, "%*"PRIu64"", (int)max[j], TAXI_GET_AS_MAT(T, i, j));
+      mvprintw(y, x, "%*"PRIu32"", (int)max[j], TAXI_GET_AS_MAT(T, i, j));
       x += max[j];
       x += dwidth + 1; // +1 for vertical seperator
     }
@@ -569,7 +572,7 @@ void taxicab_printf(taxicab T)
     {
       for (uint64_t k = 0; k < max[j]; ++k)
         putchar(' ');
-      printf("%*"PRIu64"", (int)dwidth, T.d);
+      printf("%*"PRIu32"", (int)dwidth, T.d);
       putchar('|');
     }
     putchar('\n');
@@ -577,7 +580,7 @@ void taxicab_printf(taxicab T)
     putchar('|');
     for (uint64_t j = 0; j < T.s; ++j)
     {
-      printf("%*"PRIu64"", (int)max[j], TAXI_GET_AS_MAT(T, i, j));
+      printf("%*"PRIu32"", (int)max[j], TAXI_GET_AS_MAT(T, i, j));
       for (uint64_t k = 0; k < dwidth; ++k)
         putchar(' ');
       putchar('|');

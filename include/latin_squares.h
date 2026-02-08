@@ -8,10 +8,4 @@
 
 #include <stdint.h>
 
-typedef struct
-{
-  uint32_t n;
-  uint8_t *arr;
-} latin_square;
-
 #endif // __LATIN_SQUARES__

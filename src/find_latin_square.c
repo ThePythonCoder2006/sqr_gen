@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "find_latin_squares.h"
 #include "latin_squares.h"
