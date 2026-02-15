@@ -57,39 +57,41 @@ void print_perfw(perf_counter *perf, const char *const name)
   {
     gmp_snprintf(buff, 255, "%.2Ff %s/s peak: %.2Ff %s/s\n", perf->speed, name, perf->peak_speed, name);
     printw("%s", buff);
-    return;
   }
-
-  uint8_t k = 0;
-  for (; k < len; ++k)
+  else
   {
-    mpf_div_ui(perf->speed, perf->speed, 1000);
-    mpf_div_ui(perf->peak_speed, perf->peak_speed, 1000);
-    if (mpf_cmp_ui(perf->speed, 1000) < 0)
-      break;
-  }
+    uint8_t k = 0;
+    for (; k < len; ++k)
+    {
+      mpf_div_ui(perf->speed, perf->speed, 1000);
+      mpf_div_ui(perf->peak_speed, perf->peak_speed, 1000);
+      if (mpf_cmp_ui(perf->speed, 1000) < 0)
+        break;
+    }
 
-  gmp_snprintf(buff, 255, "%.2Ff %c%s/s peak: %.2Ff %c%s/s\n", perf->speed, coeffs[k], name, perf->peak_speed, coeffs[k], name);
-  printw("%s", buff);
+    gmp_snprintf(buff, 255, "%.2Ff %c%s/s peak: %.2Ff %c%s/s\n", perf->speed, coeffs[k], name, perf->peak_speed, coeffs[k], name);
+    printw("%s", buff);
+  }
 
   if (mpf_cmp_ui(perf->lspeed, 1000) < 0)
   {
     gmp_snprintf(buff, 255, "local: %.2Ff %s/s peak: %.2Ff %s/s", perf->lspeed, name, perf->peak_lspeed, name);
     printw("%s\n", buff);
-    return;
   }
-
-  k = 0;
-  for (; k < len; ++k)
+  else
   {
-    mpf_div_ui(perf->lspeed, perf->lspeed, 1000);
-    mpf_div_ui(perf->peak_lspeed, perf->peak_lspeed, 1000);
-    if (mpf_cmp_ui(perf->lspeed, 1000) < 0)
-      break;
-  }
+    uint8_t k = 0;
+    for (; k < len; ++k)
+    {
+      mpf_div_ui(perf->lspeed, perf->lspeed, 1000);
+      mpf_div_ui(perf->peak_lspeed, perf->peak_lspeed, 1000);
+      if (mpf_cmp_ui(perf->lspeed, 1000) < 0)
+        break;
+    }
 
-  gmp_snprintf(buff, 255, "local: %.2Ff %c%s/s peak: %.2Ff %c%s/s", perf->lspeed, coeffs[k], name, perf->peak_lspeed, coeffs[k], name);
-  printw("%s\n", buff);
+    gmp_snprintf(buff, 255, "local: %.2Ff %c%s/s peak: %.2Ff %c%s/s", perf->lspeed, coeffs[k], name, perf->peak_lspeed, coeffs[k], name);
+    printw("%s\n", buff);
+  }
 
   return;
 }

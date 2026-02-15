@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <curses.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -84,22 +85,39 @@ uint8_t fall_on_different_line_after_latin_squares(uint8_t* rows, uint8_t* cols,
 {
   const uint64_t n = r * s;
 
+  assert(n == 12);
+  // printf("[DEBUG] fall_on_diff_liens: n=%lu, r=%u, s=%u\n", n, r, s);
+  // printf("[DEBUG] input poses: [");
+  for (size_t k = 0; k < n ; ++k)
+  {
+    assert(0 <= poses[k] && poses[k] <= n*n - 1);
+  }
+  // printf("]\n");
+
   int retval = 1;
   for (uint64_t k = 0; k < n; ++k)
   {
     rel_item i = poses[k] / n;
     rel_item j = poses[k] % n;
 
+    // printf("[DEBUG] k=%lu, poses[k]=%u -> i=%u, j=%u\n", k, poses[k], i, j);
+
     uint32_t new_row = 0, new_col = 0;
     position_after_latin_square_permutation(&new_row, &new_col, i, j, P, Q, r, s);
+
+    // printf("[DEBUG] after transform: new_row=%u, new_col=%u, (rows[%u]=%u, cols[%u]=%u\n", new_row, new_col, new_row, rows[new_row], new_col, cols[new_col]);
+
     if (rows[new_row] || cols[new_col])
     {
+      // printf("[DEBUG] Collision\n");
       retval = 0;
       goto ret;
     }
     rows[new_row] = 1;
     cols[new_col] = 1;
   }
+
+  // printf("[DEBUG] Success\n");
 
 ret:
   return retval;
@@ -113,7 +131,7 @@ void printf_rel(rel_item *rel, const size_t n)
   return;
 }
 
-uint8_t rels_are_disjoint(rel_item *rel1, rel_item *rel2, const size_t n)
+uint8_t rels_are_disjoint(x_y_rel rel1, x_y_rel rel2, const size_t n)
 {
   // check for every row if they intersect
   // Could be replaced with a memcmp
@@ -122,53 +140,6 @@ uint8_t rels_are_disjoint(rel_item *rel1, rel_item *rel2, const size_t n)
       return 0;
 
   return 1;
-}
-
-uint8_t rels_are_compatible(rel_item *rel1, rel_item *rel2, const size_t n)
-{
-  if (!rels_are_disjoint(rel1, rel2, n))
-    return 0;
-
-  /*
-   * The compatibility condition is as follow:
-   * initiate two counter, i = 0 and j = 0
-   * for each column:
-   *  - add one to i if the element of rel2 in this column is above the element of rel1 in the column
-   *    if the elements from rel1 and rel2 collide: n is odd and this is the middle: ignore
-   * for each row:
-   *  - add one to the j if the element of rel2 in this row is to the left of the element of rel1 in the row
-   *    if the elements from rel1 and rel2 collide: n is odd and this is the middle: ignore
-   * FOR N EVEN:
-   * rel1 and rel2 are compatible iff i = j = n/2 if n is even
-   * FOR N ODD:
-   * rel1 and rel2 are compatible iff i = j = (n - 1)/2 if n is odd
-   */
-
-  uint64_t left_count = 0;
-
-  for (size_t i = 0; i < n; ++i)
-    // check in row i if rel2 (blue) is before rel1 (yellow)
-    left_count += rel2[i] < rel1[i];
-
-  // n / 2 rounds correctly for both parity cases
-  if (left_count != n / 2)
-    return 0;
-
-  uint64_t top_count = 0;
-  for (size_t j = 0; j < n; ++j)
-  {
-    // find the rows where the elements in column j are in both rels
-    // check if rel2 (blue) is higher than rel1 (yellow)
-    size_t idx1_j = 0;
-    for (; idx1_j < n && rel1[idx1_j] != j; ++idx1_j)
-      ;
-    size_t idx2_j = 0;
-    for (; idx2_j < n && rel2[idx2_j] != j; ++idx2_j)
-      ;
-    top_count += idx2_j < idx1_j;
-  }
-
-  return top_count == n / 2;
 }
 
 typedef struct rel_item_pair_s{

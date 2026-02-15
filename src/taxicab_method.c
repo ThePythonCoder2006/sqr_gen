@@ -68,6 +68,7 @@ uint8_t search_pow_m_sqr_from_taxicab_find_sets_collision_callback(uint8_t *sele
       }
 #ifndef __NO_GUI__
   printw("  *");
+  (void) acc;
 #else
   printf("set sum = %"PRIu64"\n", acc);
 #endif
@@ -144,14 +145,40 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
   da_foreach(rel_item *, rel, &rels)
   {
     memset(rows, 0, sizeof(*rows) * n);
-    memset(cols, 0, sizeof(*rows) * n);
+    memset(cols, 0, sizeof(*cols) * n);
     if (!fall_on_different_line_after_latin_squares(rows, cols,*rel, P, Q, r, s))
       continue;
 
+    x_y_rel_after_latin_squares(rel1, *rel, P, Q, r, s);
+
     da_foreach(rel_item *, prev_rel, &mark)
     {
-      x_y_rel_after_latin_squares(rel1, *rel, P, Q, r, s);
       x_y_rel_after_latin_squares(rel2, *prev_rel, P, Q, r, s);
+
+      // Check if the two transformed rels still fall on different rows/cols
+      memset(rows, 0, sizeof(*rows) * n);
+      memset(cols, 0, sizeof(*cols) * n);
+
+      // Mark rows/cols used by rel1
+      for (uint64_t i = 0; i < n; ++i)
+      {
+        rows[i] = 1;
+        cols[rel1[i]] = 1;
+      }
+
+      // Check if rel2 collides
+      uint8_t collision = 0;
+      for (uint64_t i = 0; i < n; ++i)
+      {
+        if (rows[i] || cols[rel2[i]])
+        {
+          collision = 1;
+          break;
+        }
+      }
+
+      if (collision)
+        continue; // These two sets collide after transformation, skip
 
       if (!rels_are_diagonizable(rel1, rel2, inv, sigma, n))
         continue;
@@ -275,7 +302,7 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b, size_t re
   da_sets rels = {.n = M.n};
   pow_m_sqr_and_da_sets_packed pack = {.M = &M, .rels = &rels, .requiered_sets=requiered_sets};
 #if 1
-  find_sets_collision_method(M, a.r, a.s, requiered_sets, perf, search_pow_m_sqr_from_taxicab_find_sets_collision_callback, &pack);
+  find_sets_collision_method(M, a.r, a.s, requiered_sets, &perf, search_pow_m_sqr_from_taxicab_find_sets_collision_callback, &pack);
 #else
   iterate_over_sets_callback(a.r, a.s, search_pow_m_sqr_from_taxicab_iterate_over_sets_callback, &pack);
 #endif

@@ -59,8 +59,11 @@ raylib/*
 bin/*
 massif.out.*
 dhat.out.*
+
 nob.old
 nob
+nob_test
+nob_test.old
 
 # output files
 

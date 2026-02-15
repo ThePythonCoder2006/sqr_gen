@@ -599,7 +599,7 @@ enum SET_SEARCH_RETVALS
  * |> zero if nothing was found
  * |> positive if a collision was found
  */
-int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum, const uint32_t r, const uint32_t s, const uint32_t count, perf_counter perf, set_callback f, void *data)
+int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum, const uint32_t r, const uint32_t s, const uint32_t count, perf_counter* perf, set_callback f, void *data)
 {
   const uint32_t n = r * s;
 
@@ -646,8 +646,8 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
     if (!is_in_hshtbl(pack->found, pack->items2, n))
     {
       retval = COLLISION_FOUND;
-      mpz_add_ui(perf.counter, perf.counter, 1); // add to number of found sets
-      mpz_add_ui(perf.lcounter, perf.lcounter, 1); // add to number of found sets
+      mpz_add_ui(perf->counter, perf->counter, 1); // add to number of found sets
+      mpz_add_ui(perf->lcounter, perf->lcounter, 1); // add to number of found sets
       if (!(*f)(pack->selected, n, data))
       {
         retval = SIGSTOP;
@@ -698,7 +698,7 @@ uint8_t set_has_magic_sum(const uint8_t *selected, const pow_m_sqr M)
  *
  * calls back only when set has magic value, in contrast with iterate_over_sets
  */
-int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const uint32_t r, const uint32_t s, perf_counter perf, set_callback f, void *data)
+int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const uint32_t r, const uint32_t s, perf_counter* perf, set_callback f, void *data)
 {
   const uint64_t n = r * s;
 
@@ -797,8 +797,8 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
     {
       // sum was magic
       hshtbl_insert(&pack->found, pack->items, pack->selected, n, set_items_sqared_sum(pack->items, n), n);
-      mpz_add_ui(perf.counter, perf.counter, 1);
-      mpz_add_ui(perf.lcounter, perf.lcounter, 1);
+      mpz_add_ui(perf->counter, perf->counter, 1);
+      mpz_add_ui(perf->lcounter, perf->lcounter, 1);
       if (!(*f)(pack->selected, n, data))
         return SIGSTOP;
     }
@@ -812,7 +812,7 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
 
 #define MAX_ALLOWED_TRIES (100 * 1024 * 1024)
 
-void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s, size_t requiered_sets, perf_counter perf, set_callback f, void *data)
+void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s, size_t requiered_sets, perf_counter* perf, set_callback f, void *data)
 {
   const size_t n = r * s;
 
@@ -882,9 +882,9 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
       printw("tot: %"PRIu64"/ %"PRIu64": %.2f%%\n", tables_tot_count, tables_tot_capa, 100.0 * (double) tables_tot_count / (double) tables_tot_capa);
 
       char buff[256] = {0};
-      gmp_snprintf(buff, 255, "tries, found: %7"PRIu64", %Zu/%u", tries, perf.counter, requiered_sets);
+      gmp_snprintf(buff, 255, "tries, found: %7"PRIu64", %Zu/%u", tries, perf->counter, requiered_sets);
       printw("%s\n", buff);
-      print_perfw(&perf, "sets");
+      print_perfw(perf, "sets");
       refresh();
     }
 #else
