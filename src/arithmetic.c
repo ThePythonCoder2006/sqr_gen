@@ -17,3 +17,10 @@ uint64_t ui_pow_ui(uint64_t x, uint64_t n)
   return acc;
 }
 
+/* Euclidean GCD of two non-negative integers. */
+uint64_t gcd(uint64_t a, uint64_t b)
+{
+  while (b) { uint64_t t = b; b = a % b; a = t; }
+  return a;
+}
+

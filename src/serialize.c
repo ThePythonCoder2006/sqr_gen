@@ -67,7 +67,7 @@ void save_taxicabs(const char* const base_file_name, taxicab a, const char* cons
 
   if (fa == NULL || fb == NULL)
   {
-    fprintf(stderr, "[ERROR] Could not read file: %s", strerror(errno));
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
     exit(1);
   }
 
@@ -85,6 +85,12 @@ void fread_taxicab(FILE* f, taxicab* T)
   fread(&T->r, sizeof(T->r), 1, f);
   fread(&T->s, sizeof(T->s), 1, f);
   fread(&T->d, sizeof(T->d), 1, f);
+  T->arr = calloc(T->r * T->s, sizeof(*T->arr));
+  if (T->arr == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+  }
+
   fread(T->arr, sizeof(*T->arr), T->r * T->s, f);
 
   return;
@@ -97,7 +103,7 @@ void load_taxicabs(const char* const base_file_name, taxicab* a, const char* con
 
   if (fa == NULL || fb == NULL)
   {
-    fprintf(stderr, "[ERROR] Could not read file: %s", strerror(errno));
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
     exit(1);
   }
 
@@ -131,6 +137,12 @@ void fwrite_pow_m_sqr(FILE* f, pow_m_sqr M)
 void save_pow_m_sqr(const char* const base_file_name, pow_m_sqr M, const char* const M_name)
 {
   FILE* f = fopen(temp_sprintf("%s%s.pow_m_sqr", base_file_name, M_name), "w");
+  
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
 
   fwrite_pow_m_sqr(f, M);
 
@@ -158,6 +170,11 @@ void fwrite_rels(FILE* f, da_sets rels)
 void save_rels(const char* const base_file_name, da_sets rels, const char* const rels_name)
 {
   FILE* f = fopen(temp_sprintf("%s%s.rels", base_file_name, rels_name), "w");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
 
   fwrite_rels(f, rels);
 
@@ -177,6 +194,11 @@ void fread_rels(FILE* f, da_sets* rels)
 void load_rels(const char* const base_file_name, da_sets* rels, const char* const rels_name)
 {
   FILE* f = fopen(temp_sprintf("%s%s.rels", base_file_name, rels_name), "r");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
 
   fread_rels(f, rels);
 
@@ -205,6 +227,11 @@ void save_latin_square(const char* const base_file_name, latin_square P, const c
 {
 
   FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, P_name), "w");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
 
   fwrite_latin_square(f, P);
 
@@ -224,6 +251,11 @@ void save_latin_square(const char* const base_file_name, latin_square P, const c
 void save_latin_squares(const char*const base_file_name, latin_square* P, uint32_t r, latin_square* Q, uint32_t s, const char* const name)
 {
   FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "w");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
 
   fwrite(&r, sizeof(r), 1, f);
   fwrite(&s, sizeof(s), 1, f);
@@ -255,6 +287,11 @@ void fwrite_times(FILE* f, perf_counter perf)
 void save_times(const char* const base_file_name, perf_counter perf, const char* const name)
 {
   FILE* f = fopen(temp_sprintf("%s%s.times", base_file_name, name), "w");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
 
   fwrite_times(f, perf);
 

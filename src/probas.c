@@ -161,7 +161,7 @@ double proba_without_latin_square(pow_m_sqr M)
   // printf("p_magic = %e\n", p_m);
   // printf("1/m^2 = %e\n", 1.0 / ((double)m * (double)m));
 
-  return p_m * f_mod * n_perm_;
+  return p_m /* * f_mod */ * n_perm_;
 }
 
 double proba_with_latin_square(pow_m_sqr M, const uint32_t r, const uint32_t s)

@@ -1,3 +1,4 @@
+#include <curses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -6,11 +7,13 @@
 #include <time.h>
 
 #include <ncurses.h>
+#include "pow_m_sqr.h"
 #include "taxicab.h"
-// #define __PERF_COUNTER_IMPLEMENTATION__
 #include "perf_counter.h"
-
+#include "types.h"
 #include "find_taxicab.h"
+#include "probas.h"
+#include "arithmetic.h"
 
 #define MAX_BASE 256 // largement assez grand pour notre utilisation, pour des taxicab de taille 4x11 au plus
 #define HASH_SIZE 131071
@@ -30,9 +33,46 @@ typedef struct Node
   struct Node *next;
 } Node;
 
-static Node *hash_table[HASH_SIZE];
+/* ── Instanciable hash table ─────────────────────────────────────────────── */
+
+typedef struct
+{
+  Node *buckets[HASH_SIZE];
+} HashTable;
+
+static void ht_init(HashTable *ht)
+{
+  memset(ht->buckets, 0, sizeof(ht->buckets));
+  return;
+}
+
+static void ht_cleanup(HashTable *ht)
+{
+  for (int i = 0; i < HASH_SIZE; i++)
+  {
+    Node *node = ht->buckets[i];
+    while (node)
+    {
+      for (int j = 0; j < node->rep_count; j++)
+        free(node->reps[j].terms);
+      free(node->reps);
+      Node *tmp = node;
+      node = node->next;
+      free(tmp);
+    }
+    ht->buckets[i] = NULL;
+  }
+
+  return;
+}
+
+/* ── Shared state ────────────────────────────────────────────────────────── */
+
 static uint64_t squares[MAX_BASE + 1];
 static uint8_t squares_inited = 0;
+
+/* Legacy global table, kept for find_taxicab() / test() which are single-table callers */
+static HashTable global_ht;
 
 void init_squares()
 {
@@ -89,10 +129,12 @@ int sample_unique_terms(int s, int *out)
   return 1;
 }
 
-int try_store_rep(uint64_t sum, Rep *rep)
+/* All hash operations now take an explicit HashTable* */
+
+static int ht_try_store_rep(HashTable *ht, uint64_t sum, Rep *rep)
 {
   uint64_t h = hash_func(sum);
-  Node *node = hash_table[h];
+  Node *node = ht->buckets[h];
 
   while (node)
   {
@@ -134,9 +176,17 @@ int try_store_rep(uint64_t sum, Rep *rep)
   node->reps[0].terms = malloc(sizeof(int) * rep->s);
   memcpy(node->reps[0].terms, rep->terms, sizeof(int) * rep->s);
   node->reps[0].s = rep->s;
-  node->next = hash_table[h];
-  hash_table[h] = node;
+  node->next = ht->buckets[h];
+  ht->buckets[h] = node;
   return 1;
+}
+
+static Node *ht_find_node(HashTable *ht, uint64_t sum)
+{
+  Node *node = ht->buckets[hash_func(sum)];
+  while (node && node->sum != sum)
+    node = node->next;
+  return node;
 }
 
 // Try all combinations of r representations using backtracking
@@ -213,25 +263,13 @@ void print_result(uint64_t sum, Rep *reps, int r, int s)
   }
 }
 
+/* Legacy wrapper kept for callers that don't care about multi-table usage */
 void cleanup(void)
 {
-  for (int i = 0; i < HASH_SIZE; i++)
-  {
-    Node *node = hash_table[i];
-    while (node)
-    {
-      for (int j = 0; j < node->rep_count; j++)
-        free(node->reps[j].terms);
-      free(node->reps);
-      Node *tmp = node;
-      node = node->next;
-      free(tmp);
-    }
-    hash_table[i] = NULL;
-  }
+  ht_cleanup(&global_ht);
 }
 
-uint64_t find_terms(Rep *result_reps, int *terms, int r, int s);
+uint64_t find_terms_ht(HashTable *ht, Rep *result_reps, int *terms, int r, int s);
 void reps_to_taxicab(taxicab T, Rep *reps);
 
 int test(int argc, char **argv)
@@ -258,16 +296,9 @@ int test(int argc, char **argv)
     squares_inited = 1;
   }
 
-  // int *terms = malloc(sizeof(int) * s);
-  // Rep *result_reps = malloc(sizeof(Rep) * r);
-  // uint64_t result_sum = find_terms(result_reps, terms, r, s);
-
-  // print_result(result_sum, result_reps, r, s);
-
   taxicab T = {0};
   taxicab_init(&T, r, s, 2);
   find_taxicab(T);
-// reps_to_taxicab(T, result_reps);
 #ifndef __NO_GUI__
   initscr();
   mvtaxicab_print(0, 0, T);
@@ -281,8 +312,6 @@ int test(int argc, char **argv)
 #endif
   taxicab_clear(&T);
 
-  // free(result_reps);
-  // free(terms);
   cleanup();
   return 0;
 }
@@ -291,17 +320,14 @@ void reps_to_taxicab(taxicab T, Rep *reps)
 {
   for (uint64_t i = 0; i < T.r; ++i)
     for (uint64_t j = 0; j < T.s; ++j)
-    {
-      // printf("%"PRIu64", %"PRIu64"\n", i, j);
       TAXI_GET_AS_MAT(T, i, j) = reps[i].terms[j];
-    }
 }
 
 /*
- * returns the sum
- * result_reps contains the found reps
+ * Core search: uses the supplied HashTable so callers control isolation.
+ * Returns the taxicab sum; result_reps is filled on success.
  */
-uint64_t find_terms(Rep *result_reps, int *terms, int r, int s)
+uint64_t find_terms_ht(HashTable *ht, Rep *result_reps, int *terms, int r, int s)
 {
   Rep rep = {.terms = terms, .s = s};
   uint64_t result_sum = 0;
@@ -315,14 +341,10 @@ uint64_t find_terms(Rep *result_reps, int *terms, int r, int s)
     for (int i = 0; i < s; i++)
       sum += squares[rep.terms[i]];
 
-    int count = try_store_rep(sum, &rep);
+    int count = ht_try_store_rep(ht, sum, &rep);
     if (count >= r)
     {
-      uint64_t h = hash_func(sum);
-      Node *node = hash_table[h];
-      while (node && node->sum != sum)
-        node = node->next;
-
+      Node *node = ht_find_node(ht, sum);
       if (node && find_disjoint_reps(node->reps, node->rep_count, r, result_reps))
       {
         result_sum = sum;
@@ -335,6 +357,12 @@ uint64_t find_terms(Rep *result_reps, int *terms, int r, int s)
   return result_sum;
 }
 
+/* Convenience wrapper that uses the legacy global table (unchanged behaviour) */
+uint64_t find_terms(Rep *result_reps, int *terms, int r, int s)
+{
+  return find_terms_ht(&global_ht, result_reps, terms, r, s);
+}
+
 void find_taxicab(taxicab T)
 {
   if (!squares_inited)
@@ -345,13 +373,12 @@ void find_taxicab(taxicab T)
 
   int *terms = malloc(sizeof(int) * T.s);
   Rep *result_reps = malloc(sizeof(Rep) * T.r);
-  if (result_reps == NULL)
+  if (terms == NULL || result_reps == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
     exit(1);
   }
 
-  // uint64_t result_sum =
   (void) find_terms(result_reps, terms, T.r, T.s);
 
   reps_to_taxicab(T, result_reps);
@@ -359,4 +386,107 @@ void find_taxicab(taxicab T)
   free(result_reps);
   free(terms);
   cleanup();
+}
+
+/*
+ * Find two taxicabs a (r×s) and b (s×r) whose cross-products are distinct
+ * and whose expected number of diagonal squares exceeds p.
+ *
+ * Each taxicab gets its own HashTable so accumulated work is never shared
+ * between the two searches, eliminating the cross-contamination bug while
+ * preserving hash-table warmth across retries of the outer loop.
+ *
+ * Returns 1 when a valid pair is found.
+ */
+int find_taxicabs_proba(taxicab a, taxicab b, double p)
+{
+  if (a.r != b.s || a.s != b.r || a.d != b.d)
+  {
+    fprintf(stderr, "[ERROR] taxicab sizes or exponent mismatch: a(%u, %u, %u) != (b(%u, %u, %u))^T\n", a.r, a.s, a.d, b.r, b.s, b.d);
+    return 0;
+  }
+
+  const uint32_t r = a.r, s = a.s;
+  const size_t n = r * s;
+
+  if (!squares_inited)
+  {
+    init_squares();
+    squares_inited = 1;
+  }
+
+  int *terms_a = malloc(sizeof(int) * a.s);
+  Rep *result_reps_a = malloc(sizeof(Rep) * a.r);
+  int *terms_b = malloc(sizeof(int) * b.s);
+  Rep *result_reps_b = malloc(sizeof(Rep) * b.r);
+
+  if (terms_a == NULL || terms_b == NULL || result_reps_a == NULL || result_reps_b == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  /* One independent table per taxicab — they never see each other's entries. */
+  HashTable ht_a, ht_b;
+  ht_init(&ht_a);
+  ht_init(&ht_b);
+
+  pow_m_sqr M = {0};
+  pow_m_sqr_init(&M, n, a.d);
+  double p_latin = 0;
+
+  do
+  {
+    (void) find_terms_ht(&ht_a, result_reps_a, terms_a, r, s);
+    (void) find_terms_ht(&ht_b, result_reps_b, terms_b, s, r);
+
+    reps_to_taxicab(a, result_reps_a);
+    reps_to_taxicab(b, result_reps_b);
+    if (!taxicab_cross_products_are_distinct(a, b)) continue;
+
+    pow_semi_m_sqr_from_taxicab(M, a, b, NULL, NULL);
+    p_latin = proba_with_latin_square(M, r, s);
+
+#ifndef __NO_GUI__
+    clear();
+    mvprintw(0, 0, "%lf", p_latin);
+    refresh();
+#endif
+  } while (p_latin < p);
+
+  (void) taxicab_reduce(a);
+  (void) taxicab_reduce(b);
+  
+  ht_cleanup(&ht_a);
+  ht_cleanup(&ht_b);
+
+  free(result_reps_a);
+  free(terms_a);
+  free(result_reps_b);
+  free(terms_b);
+
+  return 1;
+}
+
+/*
+ * Divide every coefficient of T by the GCD of all its coefficients in-place.
+ * If all coefficients are 0 the function is a no-op.
+ * Returns the GCD that was applied (1 means nothing changed).
+ */
+int taxicab_reduce(taxicab T)
+{
+  /* Compute the global GCD across all r*s entries. */
+  int g = 0;
+  for (uint32_t i = 0; i < T.r; ++i)
+    for (uint32_t j = 0; j < T.s; ++j)
+      g = gcd(g, TAXI_GET_AS_MAT(T, i, j));
+
+  if (g <= 1)
+    return g; /* Nothing to do — already primitive, or all-zero. */
+
+  for (uint32_t i = 0; i < T.r; ++i)
+    for (uint32_t j = 0; j < T.s; ++j)
+      TAXI_GET_AS_MAT(T, i, j) /= g;
+
+  return g;
 }

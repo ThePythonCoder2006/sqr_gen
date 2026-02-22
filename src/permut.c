@@ -85,39 +85,24 @@ uint8_t fall_on_different_line_after_latin_squares(uint8_t* rows, uint8_t* cols,
 {
   const uint64_t n = r * s;
 
-  assert(n == 12);
-  // printf("[DEBUG] fall_on_diff_liens: n=%lu, r=%u, s=%u\n", n, r, s);
-  // printf("[DEBUG] input poses: [");
-  for (size_t k = 0; k < n ; ++k)
-  {
-    assert(0 <= poses[k] && poses[k] <= n*n - 1);
-  }
-  // printf("]\n");
-
   int retval = 1;
   for (uint64_t k = 0; k < n; ++k)
   {
     rel_item i = poses[k] / n;
     rel_item j = poses[k] % n;
 
-    // printf("[DEBUG] k=%lu, poses[k]=%u -> i=%u, j=%u\n", k, poses[k], i, j);
 
     uint32_t new_row = 0, new_col = 0;
     position_after_latin_square_permutation(&new_row, &new_col, i, j, P, Q, r, s);
 
-    // printf("[DEBUG] after transform: new_row=%u, new_col=%u, (rows[%u]=%u, cols[%u]=%u\n", new_row, new_col, new_row, rows[new_row], new_col, cols[new_col]);
-
     if (rows[new_row] || cols[new_col])
     {
-      // printf("[DEBUG] Collision\n");
       retval = 0;
       goto ret;
     }
     rows[new_row] = 1;
     cols[new_col] = 1;
   }
-
-  // printf("[DEBUG] Success\n");
 
 ret:
   return retval;

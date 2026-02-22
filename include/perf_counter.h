@@ -93,6 +93,8 @@ void print_perfw(perf_counter *perf, const char *const name)
     printw("%s\n", buff);
   }
 
+  printw("step time: %.2lfs\n", time);
+
   return;
 }
 

@@ -586,7 +586,7 @@ void permute_lines(pow_m_sqr M, uint64_t *permut)
     exit(1);
   }
 
-  memcpy(t, M.cols, M.n * sizeof(*M.rows));
+  memcpy(t, M.rows, M.n * sizeof(*M.rows));
   for (uint32_t i = 0; i < M.n; ++i)
     M.rows[permut[i]] = t[i];
 

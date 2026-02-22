@@ -1,13 +1,11 @@
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include <ncurses.h>
 
 #include "permut.h"
 #include "pow_m_sqr.h"
 #include "taxicab.h"
-#include "serialize.h"
 
 #include "know/16x16x4.h"
 

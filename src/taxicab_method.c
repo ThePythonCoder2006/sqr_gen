@@ -109,8 +109,13 @@ uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data)
 
 uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data)
 {
+  static size_t mark_count_max = 0;
+
   (void)_1, (void)_2;
   iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
+
+  if (pack->mark.count > mark_count_max)
+    mark_count_max = pack->mark.count;
 
 #ifndef __NO_GUI__
   if ((pack->refresh_frame & 0xff) == 0)
@@ -122,7 +127,7 @@ uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data)
     printw("%s\n", buff);
     print_perfw(pack->perf, "arrays of latin squares");
     addch('\n');
-    printw("mark.count: %"PRIu64"\n", pack->mark.count);
+    printw("mark.count: %"PRIu64", max: %"PRIu64"\n", pack->mark.count, mark_count_max);
     refresh();
   }
   ++pack->refresh_frame;
@@ -179,6 +184,9 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
 
       if (collision)
         continue; // These two sets collide after transformation, skip
+
+      memset(inv, 0, n * sizeof(*inv));
+      memset(sigma, 0, n * sizeof(*inv));
 
       if (!rels_are_diagonizable(rel1, rel2, inv, sigma, n))
         continue;
