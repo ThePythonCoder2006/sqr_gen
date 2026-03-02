@@ -4,33 +4,9 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "latin_squares.h"
+#include "taxicab.h"
 #include "pow_m_sqr.h"
 #include <ncurses.h>
-
-#undef ACS_TTEE
-#undef ACS_RTEE
-#undef ACS_LTEE
-#undef ACS_BTEE
-#undef ACS_PLUS
-#undef ACS_ULCORNER
-#undef ACS_URCORNER
-#undef ACS_LLCORNER
-#undef ACS_LRCORNER
-#undef ACS_VLINE
-#undef ACS_HLINE
-
-#define ACS_TTEE '+'
-#define ACS_RTEE '+'
-#define ACS_LTEE '+'
-#define ACS_BTEE '+'
-#define ACS_PLUS '+'
-#define ACS_ULCORNER '+'
-#define ACS_URCORNER '+'
-#define ACS_LLCORNER '+'
-#define ACS_LRCORNER '+'
-#define ACS_VLINE '|'
-#define ACS_HLINE '-'
 
 /*
  * max must be a non-NULL pointer to an array of length at least M.n
@@ -190,7 +166,7 @@ void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, rel_item *items
 
   int x = x0,
       y = y0;
-  mvaddch(y, x, ACS_ULCORNER);
+  mvaddch(y, x, '+');
   mvvline(y + 1, x, 0, 3 * M.n);
   mvhline(y, x + 1, 0, width - 1);
 
@@ -212,36 +188,36 @@ void mvpow_m_sqr_printw_highlighted(int y0, int x0, pow_m_sqr M, rel_item *items
       if (i == 0)
       {
         if (j == M.n - 1)
-          mvaddch(y - 1, x, ACS_URCORNER);
+          mvaddch(y - 1, x, '+');
         else
-          mvaddch(y - 1, x, ACS_TTEE);
+          mvaddch(y - 1, x, '+');
       }
       else
       {
         if (j == M.n - 1)
-          mvaddch(y - 1, x, ACS_RTEE);
+          mvaddch(y - 1, x, '+');
         else
-          mvaddch(y - 1, x, ACS_PLUS);
+          mvaddch(y - 1, x, '+');
       }
 
-      mvaddch(y, x, ACS_VLINE);
-      mvaddch(y + 1, x, ACS_VLINE);
+      mvaddch(y, x, '|');
+      mvaddch(y + 1, x, '|');
 
       if (j == 0)
       {
         mvhline(y + 2, x0 + 1, 0, width - 2);
         if (i == M.n - 1)
-          mvaddch(y + 2, x0, ACS_LLCORNER);
+          mvaddch(y + 2, x0, '+');
         else
-          mvaddch(y + 2, x0, ACS_LTEE);
+          mvaddch(y + 2, x0, '+');
       }
 
       if (i == M.n - 1)
       {
         if (j == M.n - 1)
-          mvaddch(y + 2, x, ACS_LRCORNER);
+          mvaddch(y + 2, x, '+');
         else
-          mvaddch(y + 2, x, ACS_BTEE);
+          mvaddch(y + 2, x, '+');
       }
 
       ++x;
@@ -307,7 +283,7 @@ void mvhighlighted_square_printw(int y0, int x0, highlighted_square M, int BG_CO
 
   int x = x0,
       y = y0;
-  mvaddch(y, x, ACS_ULCORNER);
+  mvaddch(y, x, '+');
   mvvline(y + 1, x, 0, 3 * M.n);
   mvhline(y, x + 1, 0, width - 1);
 
@@ -329,36 +305,36 @@ void mvhighlighted_square_printw(int y0, int x0, highlighted_square M, int BG_CO
       if (i == 0)
       {
         if (j == M.n - 1)
-          mvaddch(y - 1, x, ACS_URCORNER);
+          mvaddch(y - 1, x, '+');
         else
-          mvaddch(y - 1, x, ACS_TTEE);
+          mvaddch(y - 1, x, '+');
       }
       else
       {
         if (j == M.n - 1)
-          mvaddch(y - 1, x, ACS_RTEE);
+          mvaddch(y - 1, x, '+');
         else
-          mvaddch(y - 1, x, ACS_PLUS);
+          mvaddch(y - 1, x, '+');
       }
 
-      mvaddch(y, x, ACS_VLINE);
-      mvaddch(y + 1, x, ACS_VLINE);
+      mvaddch(y, x, '|');
+      mvaddch(y + 1, x, '|');
 
       if (j == 0)
       {
         mvhline(y + 2, x0 + 1, 0, width - 2);
         if (i == M.n - 1)
-          mvaddch(y + 2, x0, ACS_LLCORNER);
+          mvaddch(y + 2, x0, '+');
         else
-          mvaddch(y + 2, x0, ACS_LTEE);
+          mvaddch(y + 2, x0, '+');
       }
 
       if (i == M.n - 1)
       {
         if (j == M.n - 1)
-          mvaddch(y + 2, x, ACS_LRCORNER);
+          mvaddch(y + 2, x, '+');
         else
-          mvaddch(y + 2, x, ACS_BTEE);
+          mvaddch(y + 2, x, '+');
       }
 
       ++x;
@@ -411,7 +387,7 @@ void mvtaxicab_print(int y0, int x0, taxicab T)
   // putchar('\n');
 
   int x = x0, y = y0;
-  mvaddch(y, x, ACS_ULCORNER);
+  mvaddch(y, x, '+');
   mvvline(y + 1, x, 0, 3 * T.r);
   mvhline(y, x + 1, 0, width - 1);
 
@@ -427,36 +403,36 @@ void mvtaxicab_print(int y0, int x0, taxicab T)
       if (i == 0)
       {
         if (j == T.s - 1)
-          mvaddch(y - 1, x, ACS_URCORNER);
+          mvaddch(y - 1, x, '+');
         else
-          mvaddch(y - 1, x, ACS_TTEE);
+          mvaddch(y - 1, x, '+');
       }
       else
       {
         if (j == T.s - 1)
-          mvaddch(y - 1, x, ACS_RTEE);
+          mvaddch(y - 1, x, '+');
         else
-          mvaddch(y - 1, x, ACS_PLUS);
+          mvaddch(y - 1, x, '+');
       }
 
-      mvaddch(y, x, ACS_VLINE);
-      mvaddch(y + 1, x, ACS_VLINE);
+      mvaddch(y, x, '|');
+      mvaddch(y + 1, x, '|');
 
       if (j == 0)
       {
         mvhline(y + 2, x0 + 1, 0, width - 2);
         if (i == T.r - 1)
-          mvaddch(y + 2, x0, ACS_LLCORNER);
+          mvaddch(y + 2, x0, '+');
         else
-          mvaddch(y + 2, x0, ACS_LTEE);
+          mvaddch(y + 2, x0, '+');
       }
 
       if (i == T.r - 1)
       {
         if (j == T.s - 1)
-          mvaddch(y + 2, x, ACS_LRCORNER);
+          mvaddch(y + 2, x, '+');
         else
-          mvaddch(y + 2, x, ACS_BTEE);
+          mvaddch(y + 2, x, '+');
       }
 
       ++x;

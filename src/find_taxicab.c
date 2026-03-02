@@ -434,9 +434,12 @@ int find_taxicabs_proba(taxicab a, taxicab b, double p)
   pow_m_sqr M = {0};
   pow_m_sqr_init(&M, n, a.d);
   double p_latin = 0;
+  double max_p_latin = 0;
 
+  uint16_t refresh_frames = 0;
   do
   {
+    ++refresh_frames;
     (void) find_terms_ht(&ht_a, result_reps_a, terms_a, r, s);
     (void) find_terms_ht(&ht_b, result_reps_b, terms_b, s, r);
 
@@ -446,12 +449,19 @@ int find_taxicabs_proba(taxicab a, taxicab b, double p)
 
     pow_semi_m_sqr_from_taxicab(M, a, b, NULL, NULL);
     p_latin = proba_with_latin_square(M, r, s);
+    if (p_latin > max_p_latin)
+      max_p_latin = p_latin;
 
+    if ((refresh_frames & 0x3f) == 0)
+    {
 #ifndef __NO_GUI__
-    clear();
-    mvprintw(0, 0, "%lf", p_latin);
-    refresh();
+      clear();
+      mvprintw(0, 0, "p_latin: %lf, max: %lf\n", p_latin, max_p_latin);
+      refresh();
+#else
+      printf("\rp_latin: %lf, max: %lf\n", p_latin, max_p_latin);
 #endif
+    }
   } while (p_latin < p);
 
   (void) taxicab_reduce(a);

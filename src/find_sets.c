@@ -140,10 +140,10 @@ uint8_t iterate_over_sets_callback_inside(sets_search_data *d, uint32_t current_
 
 // ----------- collision method ---------------
 
-#define HSHTBL_BASE_SIZE (1024)
+#define HSHTBL_BASE_SIZE (32)
 #define HSHTBL_FULLNESS_RATIO (0.7)
-#define HSHTBL_MAX_FULLNESS_RATIO (0.92)
-#define HSHTBL_MAX_SIZE ((1<<26) - 1)
+#define HSHTBL_MAX_FULLNESS_RATIO (0.70)
+#define HSHTBL_MAX_SIZE ((1<<25) - 1)
 
 typedef struct hshtbl_node_s
 {
@@ -219,7 +219,6 @@ void free_hshtbls(hshtbl *table, const uint32_t n)
   return;
 }
 
-#if __FIND_SETS_SLIPTMIX_HASH__
 static inline uint32_t hash_func(uint64_t x)
 {
   // from splitmix64
@@ -228,12 +227,6 @@ static inline uint32_t hash_func(uint64_t x)
   x = x ^ (x >> 31);
   return (uint32_t)x;
 }
-#else
-static inline uint32_t hash_func(uint64_t x)
-{
-  return (uint32_t)x;
-}
-#endif
 
 /*
   set1 and set2 MUST have the same size of count ie set2_selected MUST have exactly count entries equal to 1 and every other being 0

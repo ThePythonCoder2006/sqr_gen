@@ -7,5 +7,8 @@
 #define __LATIN_SQUARES__
 
 #include <stdint.h>
+#include "types.h"
+
+uint8_t is_latin_square(latin_square P);
 
 #endif // __LATIN_SQUARES__

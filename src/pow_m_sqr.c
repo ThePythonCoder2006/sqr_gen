@@ -163,14 +163,20 @@ uint8_t check_sums(pow_m_sqr M)
   uint64_t mu, curr;
 
   mu = pow_m_sqr_sum_row(M, 0);
+#ifndef __NO_GUI__
   printw("mu = %"PRIu64"\n", mu);
+#endif
 
   curr = pow_m_sqr_sum_diag1(M);
+#ifndef __NO_GUI__
   printw("diag1: %"PRIu64"\n", curr);
+#endif
   if (curr != mu)
     return 0;
   curr = pow_m_sqr_sum_diag2(M);
+#ifndef __NO_GUI__
   printw("diag2: %"PRIu64"\n", curr);
+#endif
   if (curr != mu)
     return 0;
   return 1;

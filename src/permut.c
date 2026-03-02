@@ -230,7 +230,9 @@ void permute_into_pow_m_sqr(pow_m_sqr *M, rel_item *diag1, rel_item *diag2)
 
   // mvhighlighted_square_printw(0, 0, H, COLOR_BLUE, COLOR_YELLOW);
   pow_m_sqr_from_highlighted_square(M, NULL, NULL, &H);
+#ifndef __NO_GUI__
   getch();
+#endif
 
   highlighted_square_clear(&H);
 

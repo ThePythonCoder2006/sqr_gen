@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #include "perf_counter.h"
-#include "taxicab.h"
 
 #include "types.h"
 

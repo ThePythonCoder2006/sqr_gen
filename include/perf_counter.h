@@ -26,6 +26,8 @@ void perf_counter_clear(perf_counter* perf);
 
 #include <ncurses.h>
 
+#ifndef __NO_GUI__
+
 void print_perfw(perf_counter *perf, const char *const name)
 {
   char coeffs[] = {'k', 'M', 'G', 'T', 'P'};
@@ -97,6 +99,8 @@ void print_perfw(perf_counter *perf, const char *const name)
 
   return;
 }
+
+#endif
 
 void printf_perf(perf_counter* perf, const char *const name)
 {
