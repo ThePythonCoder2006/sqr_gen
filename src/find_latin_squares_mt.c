@@ -9,6 +9,7 @@
 #include "find_latin_squares.h"
 #include "pow_m_sqr.h"
 #include "perf_counter.h"
+#include "types.h"
 
 #ifndef __NO_GUI__
 #include <ncurses.h>
@@ -48,10 +49,54 @@ void mt_context_init(mt_context *ctx, size_t max_threads)
     ctx->threads[i].peak_speed = 0.0;
     ctx->threads[i].active = 0;
   }
+
+  return;
+}
+
+void mt_context_init_with_Q(mt_context *ctx, size_t max_threads, uint32_t Q_len, uint32_t Q_elem_size)
+{
+  mt_context_init(ctx, max_threads);
+
+  ctx->Q_len = Q_len;
+  ctx->Q_elem_size = Q_elem_size;
+  ctx->Q_arrays = calloc(max_threads, sizeof(latin_square *));
+  if (ctx->Q_arrays == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  for (size_t i = 0; i < max_threads; ++i)
+  {
+    ctx->Q_arrays[i] = calloc(Q_len, sizeof(latin_square));
+    if (ctx->Q_arrays[i] == NULL)
+    {
+      fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+      exit(1);
+    }
+
+    for (uint32_t j = 0; j < Q_len; ++j)
+      latin_square_init(&ctx->Q_arrays[i][j], Q_elem_size);
+  }
+
+  return;
 }
 
 void mt_context_free(mt_context *ctx)
 {
+  if (ctx->Q_arrays != NULL)
+  {
+    for (size_t i = 0; i < ctx->max_threads; ++i)
+      if (ctx->Q_arrays[i] != NULL)
+      {
+        for (uint32_t j = 0; j < ctx->Q_len; ++j)
+          latin_square_clear(&ctx->Q_arrays[i][j]);
+        free(ctx->Q_arrays[i]);
+      }
+    free(ctx->Q_arrays);
+    ctx->Q_arrays = NULL;
+  }
+
   pthread_mutex_destroy(&ctx->mutex);
   free(ctx->threads);
   ctx->threads = NULL;
@@ -135,7 +180,7 @@ static uint8_t mt_iterate_next_square(latin_square *P, void *data)
   thread_work_data *work = mt_data->work_data;
 
   // Check if we should stop
-  // Reading the flag does not require a muter, worst case scenario we miss it by one cycle: no big deal
+  // Reading the flag does not require a mutex, worst case scenario we miss it by one cycle: no big deal
   uint8_t should_stop = work->ctx->stop_flag;
 
   if (should_stop) return 0;
@@ -148,8 +193,10 @@ static uint8_t mt_iterate_next_square(latin_square *P, void *data)
     // Update iteration count
     mt_data->local_iterations++;
 
-    // Update stats every 1000 iterations
-    if (mt_data->local_iterations % 1000 == 0)
+#define STATS_REFRESH_FREQUENCY (100)
+
+    // Update stats every STATS_REFRESH_FREQUENCY iterations
+    if (mt_data->local_iterations % STATS_REFRESH_FREQUENCY == 0)
     {
       double current_time = (double)clock() / CLOCKS_PER_SEC;
       double elapsed = current_time - mt_data->start_time;
@@ -165,7 +212,7 @@ static uint8_t mt_iterate_next_square(latin_square *P, void *data)
       }
 
       pthread_mutex_lock(&work->ctx->mutex);
-      work->ctx->total_iterations += 1000;
+      work->ctx->total_iterations += STATS_REFRESH_FREQUENCY;
       pthread_mutex_unlock(&work->ctx->mutex);
     }
 
@@ -223,9 +270,21 @@ static uint8_t mt_iterate_first_square_remainder(latin_square *P, void *data)
     }
   }
 
-  // Fill the remainder of this square, starting from position (1,1)
-  // (since row 0 is complete and position (1,0) is filled)
-  uint8_t result = fill_latin_square_remainder(&s, P, 1, 1, mt_iterate_next_square, data);
+  // Calculate starting position after NUM_FIXED_POSITIONS fixed cells
+  // Fixed positions fill (1,0), (1,1), ..., potentially wrapping to row 2
+  uint64_t start_row = 1 + (NUM_FIXED_POSITIONS / n);
+  uint64_t start_col = NUM_FIXED_POSITIONS % n;
+
+  // If we're at the end of a row, move to next row, first column
+  if (start_col >= n)
+  {
+    start_row++;
+    start_col = 0;
+  }
+
+
+  // Fill the remainder of this square, starting after fixed positions
+  uint8_t result = fill_latin_square_remainder(&s, P, start_row, start_col, mt_iterate_next_square, data);
 
   // Free the state
   for (uint64_t i = 0; i < n; i++)
@@ -239,9 +298,13 @@ static uint8_t mt_iterate_first_square_remainder(latin_square *P, void *data)
   return result;
 }
 
+extern __thread uint64_t g_current_thread_id;
+
 static void *thread_worker(void *arg)
 {
   thread_work_data *work = (thread_work_data *)arg;
+
+  g_current_thread_id = work->thread_id;
 
   // no mutex needed, only this thread shuold ever write to his .active
   // others may read but this wont cause any actual issue
@@ -270,6 +333,42 @@ static void *thread_worker(void *arg)
   return NULL;
 }
 
+// Helper to convert linear partition index to position values
+// partition_id: linear index (0, 1, 2, ...)
+// n: size of Latin square
+// values: output array of NUM_FIXED_POSITIONS values
+//
+// IMPORTANT: Row 0 is [0, 1, 2, ..., n-1], so column j contains j in row 0
+// Therefore position (1, j) cannot contain value j (already in that column)
+// Each position has exactly (n-1) valid values
+static void partition_id_to_values(uint64_t partition_id, uint64_t n, uint8_t *values)
+{
+  for (uint64_t pos = 0; pos < NUM_FIXED_POSITIONS; ++pos)
+  {
+    // Position (1, pos) is in column 'pos', which already contains 'pos' in row 0
+    // So we can use values 0, 1, ..., pos-1, pos+1, ..., n-1 (n-1 values total)
+
+    uint64_t value_index = partition_id % (n - 1);
+    partition_id /= (n - 1);
+
+    // Map value_index (0 to n-2) to actual value (skipping 'pos')
+    if (value_index < pos)
+      values[pos] = value_index;
+    else
+      values[pos] = value_index + 1;  // Skip the value 'pos'
+  }
+}
+
+// Calculate total number of partitions
+static uint64_t calculate_num_partitions(uint64_t n)
+{
+  // Each of the NUM_FIXED_POSITIONS positions has (n-1) valid values
+  uint64_t count = 1;
+  for (int i = 0; i < NUM_FIXED_POSITIONS; ++i)
+    count *= (n - 1);
+  return count;
+}
+
 uint8_t iterate_over_all_square_array_multithreaded(
   latin_square *P,
   uint64_t len,
@@ -283,11 +382,10 @@ uint8_t iterate_over_all_square_array_multithreaded(
   uint8_t result = 1;
 
   const uint64_t n = P[0].n;
+  const uint64_t num_partitions = calculate_num_partitions(n);
 
-  // We'll distribute work by partitioning based on position (1,0) of the first square
-
-  thread_work_data *work_items = calloc(n, sizeof(thread_work_data));
-  pthread_t *threads = calloc(n, sizeof(pthread_t));
+  thread_work_data *work_items = calloc(ctx->max_threads, sizeof(thread_work_data));
+  pthread_t *threads = calloc(ctx->max_threads, sizeof(pthread_t));
 
   if (work_items == NULL || threads == NULL)
   {
@@ -296,18 +394,23 @@ uint8_t iterate_over_all_square_array_multithreaded(
   }
 
   size_t active_threads = 0;
+  size_t next_slot = 0;
 
-  // For each possible value in position (1,0) of the first square
-  // first_val cannot be 0 as the first line is (0, 1, ...) so 0 is already used in the first column
-  for (uint64_t first_val = 1; first_val < n && !ctx->stop_flag; ++first_val)
+  // iterate over all partitions
+  for (uint64_t partition_id = 0; partition_id < num_partitions && !ctx->stop_flag; ++partition_id)
   {
     // Wait if we've reached max threads
-    while (active_threads >= ctx->max_threads && !ctx->stop_flag)
+    if (active_threads >= ctx->max_threads)
     {
-      // Wait for all current threads to finish
-      for (size_t i = 0; i < active_threads; ++i)
-        pthread_join(threads[i], NULL);
-      active_threads = 0;
+      // Wait for the thread in the current slot to finish
+      pthread_join(threads[next_slot], NULL);
+
+      // Free the old work data
+      for (uint64_t j = 0; j < len; ++j)
+        latin_square_clear(&work_items[next_slot].P[j]);
+      free(work_items[next_slot].P);
+
+      active_threads--;
     }
 
     if (ctx->stop_flag) break;
@@ -326,15 +429,22 @@ uint8_t iterate_over_all_square_array_multithreaded(
       // Initialize all cells as UNSET
       for (uint64_t j = 0; j < P[i].n * P[i].n; ++j)
         P_copy[i].arr[j] = LATIN_SQUARE_UNSET;
-      assert(P_copy[i].n == P[i].n);
     }
 
     // Fix the first row of the first square (standard form: 0, 1, 2, ..., n-1)
     for (uint64_t col = 0; col < n; ++col)
       GET_AS_MAT(P_copy[0].arr, 0, col, n) = col;
 
-    // Fix position (1,0) to partition the work
-    GET_AS_MAT(P_copy[0].arr, 1, 0, n) = first_val;
+    // Fix NUM_FIXED_POSITIONS positions to partition the work
+    uint8_t fixed_values[NUM_FIXED_POSITIONS] = {0};
+    partition_id_to_values(partition_id, n, fixed_values);
+
+    for (int pos = 0; pos < NUM_FIXED_POSITIONS; ++ pos)
+    {
+      uint64_t row = 1 + (pos / n); // start at row 1
+      uint64_t col = pos % n;
+      GET_AS_MAT(P_copy[0].arr, row, col, n) = fixed_values[pos];
+    }
 
     // Set up work data
     work_items[active_threads].P = P_copy;
@@ -342,13 +452,14 @@ uint8_t iterate_over_all_square_array_multithreaded(
     work_items[active_threads].f = f;
     work_items[active_threads].data = data;
     work_items[active_threads].ctx = ctx;
-    work_items[active_threads].start_index = first_val;
-    work_items[active_threads].thread_id = active_threads;
+    work_items[active_threads].start_index = partition_id;
+    work_items[active_threads].thread_id = next_slot;
 
     // Create thread
-    pthread_create(&threads[active_threads], NULL, thread_worker, &work_items[active_threads]);
+    pthread_create(&threads[next_slot], NULL, thread_worker, &work_items[active_threads]);
 
     active_threads++;
+    next_slot = (next_slot + 1) % ctx->max_threads;
   }
 
   // Wait for all remaining threads

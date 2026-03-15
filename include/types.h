@@ -74,4 +74,6 @@ typedef struct da_sets_s
   uint32_t n; // size of each set
 } da_sets;
 
+extern const uint64_t A000479[];
+
 #endif //__TYPES__

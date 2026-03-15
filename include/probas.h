@@ -7,5 +7,6 @@
 
 double proba_without_latin_square(pow_m_sqr M);
 double proba_with_latin_square(pow_m_sqr M, const uint32_t r, const uint32_t s);
+size_t number_of_latin_squares(uint32_t r, uint32_t s);
 
 #endif

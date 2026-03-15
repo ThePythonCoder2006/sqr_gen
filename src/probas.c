@@ -164,8 +164,13 @@ double proba_without_latin_square(pow_m_sqr M)
   return p_m /* * f_mod */ * n_perm_;
 }
 
+size_t number_of_latin_squares(uint32_t r, uint32_t s)
+{
+  return ui_pow_ui(A000479[r], s) * ui_pow_ui(A000479[s], r);
+}
+
 double proba_with_latin_square(pow_m_sqr M, const uint32_t r, const uint32_t s)
 {
-  return proba_without_latin_square(M) * ui_pow_ui(A000479[r], s) * ui_pow_ui(A000479[s], r);
+  return proba_without_latin_square(M) * number_of_latin_squares(r, s);
 }
 

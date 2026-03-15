@@ -9,6 +9,13 @@
 
 #include "perf_counter.h"
 
+// Number of positions to fix for work partitioning
+// Fixes positions (1,0), (1,1), ..., (1, NUM_FIXED_POSITIONS-1) or wraps to row 2
+// This creates approximately (n-1)^NUM_FIXED_POSITIONS partitions for parallelization
+#ifndef NUM_FIXED_POSITIONS
+#define NUM_FIXED_POSITIONS 2
+#endif
+
 typedef struct {
     uint64_t thread_id;
     uint64_t iterations;
@@ -33,9 +40,15 @@ typedef struct {
     // Display data (updated by worker threads, read by display thread)
     uint64_t display_mark_count;
     perf_counter *display_perf;
+
+    // Pre-allocated Q arrays for taxicab search (one per thread)
+    latin_square **Q_arrays;
+    uint32_t Q_len;
+    uint32_t Q_elem_size;
 } mt_context;
 
 void mt_context_init(mt_context *ctx, size_t max_threads);
+void mt_context_init_with_Q(mt_context *ctx, size_t max_threads, uint32_t Q_len, uint32_t Q_elem_size);
 void mt_context_free(mt_context *ctx);
 
 uint8_t iterate_over_all_square_array_multithreaded(

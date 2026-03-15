@@ -20,6 +20,8 @@
 #include "find_latin_squares_mt.h"
 #include "taxicab_method_common.h"
 
+__thread uint64_t g_current_thread_id = 0;
+
 typedef struct {
   /*
    * P = array of size r of latin_squares of side s
@@ -49,6 +51,8 @@ uint8_t check_for_compatibility_in_latin_squares_mt(latin_square *P, latin_squar
 
 void print_mt_stats(mt_context *ctx, perf_counter *perf)
 {
+  mpz_set_ui(perf->counter, ctx->total_iterations);
+  mpz_set_ui(perf->lcounter, ctx->total_iterations);
 #ifndef __NO_GUI__
   // Print header
   printw("\rTotal iterations: %lu\n", (unsigned long)ctx->total_iterations);
@@ -172,29 +176,14 @@ uint8_t compat_callback1_mt(latin_square *P_start, uint64_t _2, void *data)
   thread_local_pack local_pack = {
     .shared_pack = shared_pack,
     .P = P_start,  // Thread-local P array (filled by this thread)
-    .Q = NULL  // Will be set in compat_callback2_mt
+    .Q = NULL
   };
 
   // Allocate thread-local Q array for this iteration
-  latin_square *Q_local = calloc(shared_pack->s, sizeof(latin_square));
-  if (Q_local == NULL)
-  {
-    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
-    exit(1);
-  }
-
-  for (uint32_t i = 0; i < shared_pack->s; ++i)
-    latin_square_init(&Q_local[i], shared_pack->r);
+  latin_square *Q_local = shared_pack->mt_ctx->Q_arrays[g_current_thread_id];
 
   // Iterate over Q using the thread-local Q array
-  uint8_t result = iterate_over_all_square_array_callback(Q_local, shared_pack->s, compat_callback2_mt, &local_pack);
-
-  // Cleanup thread-local Q
-  for (uint32_t i = 0; i < shared_pack->s; ++i)
-    latin_square_clear(&Q_local[i]);
-  free(Q_local);
-
-  return result;
+  return iterate_over_all_square_array_callback(Q_local, shared_pack->s, compat_callback2_mt, &local_pack);
 }
 
 uint8_t compat_callback2_mt(latin_square *Q_array, uint64_t _2, void *data)
@@ -267,7 +256,7 @@ uint8_t find_set_compatible_latin_squares_array_mt(latin_square *P, latin_square
   const size_t n = r * s;
 
   mt_context mt_ctx;
-  mt_context_init(&mt_ctx, max_threads);
+  mt_context_init_with_Q(&mt_ctx, max_threads, s, r);
 
   iterate_over_latin_squares_array_pack_mt pack = {
     .P = P,

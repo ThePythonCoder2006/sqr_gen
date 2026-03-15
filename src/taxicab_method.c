@@ -18,22 +18,6 @@
 #include "find_latin_squares.h"
 #include "taxicab_method_common.h"
 
-typedef struct
-{
-  /*
-   * P = array of size r of latin_squares of side s
-   * Q = array of size s of latin_squares of side r
-   */
-  latin_square *P, *Q;
-  pow_m_sqr *M;
-  uint32_t r, s;
-  da_sets rels, mark;
-  perf_counter* perf;
-  x_y_rel rel1, rel2, inv, sigma;
-  uint8_t* rows, *cols;
-  uint16_t refresh_frame;
-} iterate_over_latin_squares_array_pack;
-
 void print_iterate_over_latin_squares_array_pack(iterate_over_latin_squares_array_pack *pack);
 uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data);
 uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data);
