@@ -25,6 +25,7 @@ size_t max_threads = DEFAULT_MAX_THREADS;
 uint8_t use_multithreading = 0;
 uint8_t new_taxicabs = 0;
 double min_proba = 0;
+uint8_t regen_taxicab_list = 0;
 #define DEFAUL_MIN_PROBA (.01)
 
 void show_starting_stats_on_square(const taxicab a, const taxicab b, const pow_m_sqr M)
@@ -89,7 +90,7 @@ int parse_args(int argc, char** argv)
   // Parse arguments
   while (argc > 0) {
     const char *arg = nob_shift(argv, argc);
-    
+
     if (strcmp(arg, "-mt") == 0 || strcmp(arg, "--multithreaded") == 0)
       use_multithreading = true;
     else if (strcmp(arg, "-t") == 0 || strcmp(arg, "--threads") == 0)
@@ -103,7 +104,7 @@ int parse_args(int argc, char** argv)
     }
     else if (strcmp(arg, "-n") == 0 || strcmp(arg, "--new-taxicabs") == 0)
     {
-      new_taxicabs = true;  
+      new_taxicabs = true;
       if (argc > 0)
       {
       min_proba = atof(nob_shift(argv, argc));
@@ -111,6 +112,8 @@ int parse_args(int argc, char** argv)
         min_proba = DEFAUL_MIN_PROBA;
       }
     }
+    else if (strcmp(arg, "--regen") == 0)
+      regen_taxicab_list = true;
     else if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
     {
       printf("Usage: ./main [OPTIONS] [REQUIRED_SETS]\n");
@@ -118,11 +121,12 @@ int parse_args(int argc, char** argv)
       printf("  -mt, --multithreaded  Use multithreaded Latin square search\n");
       printf("  -t, --threads <N>     Set number of threads (default: %d)\n", DEFAULT_MAX_THREADS);
       printf("-n, --new-taxicabs <p>  Find new taxicabs with expected number of diagonals at least p");
+      printf("-regen                  regenerates the file holding the latin square arrays list\n");
       printf("  -h, --help        Show this help message\n");
       printf("\nRequired sets: Number of compatible sets to find (default: %llu)\n", REQUIERED_SETS);
       return 0;
     }
-    else 
+    else
       // Try to parse as required sets number
       requiered_sets = atoi(arg);
   }
@@ -151,12 +155,33 @@ int main(int argc, char **argv)
   start_color();
 #endif
 
+  const uint32_t r = 3, s = 4, d = 2;
+
+  if (regen_taxicab_list || !file_exists("./squares.latin_square"))
+  {
+    latin_square* P = calloc(r, sizeof(latin_square));
+    latin_square* Q = calloc(s, sizeof(latin_square));
+    for (uint32_t i = 0; i < r; ++i)
+      latin_square_init(P + i, s);
+    for (uint32_t j = 0; j < s; ++j)
+      latin_square_init(Q + j, r);
+
+    save_all_latin_square_arrays("./", P, Q, r, s, "squares");
+
+    for (uint32_t i = 0; i < r; ++i)
+      latin_square_clear(P + i);
+    for (uint32_t j = 0; j < s; ++j)
+      latin_square_clear(Q + j);
+    free(P);
+    free(Q);
+  }
+
   taxicab a = {0};
   taxicab b = {0};
   if (new_taxicabs)
   {
-    taxicab_init(&a, 3, 4, 2);
-    taxicab_init(&b, a.s, a.r, a.d);
+    taxicab_init(&a, r, s, d);
+    taxicab_init(&b, s, r, d);
 
     find_taxicabs_proba(a, b, min_proba);
   }
@@ -169,7 +194,7 @@ int main(int argc, char **argv)
   pow_semi_m_sqr_from_taxicab(sq, a, b, NULL, NULL);
 
   show_starting_stats_on_square(a, b, sq);
- 
+
   if (use_multithreading)
     search_pow_m_sqr_from_taxicabs_mt(sq, a, b, requiered_sets, max_threads);
   else

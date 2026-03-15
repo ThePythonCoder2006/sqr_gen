@@ -1,4 +1,3 @@
-#include "types.h"
 #include <curses.h>
 #include <ncurses.h>
 #include <stdio.h>
@@ -9,67 +8,35 @@
 #define NOB_STRIP_PREFIX
 #include "nob.h"
 
+#include "types.h"
 #include "taxicab.h"
 #include "pow_m_sqr.h"
 #include "taxicab_method.h"
 #include "permut.h"
 #include "serialize.h"
 #include "find_sets.h"
-#include "find_latin_squares.h"
 #include "taxicab_method_common.h"
 
 void print_iterate_over_latin_squares_array_pack(iterate_over_latin_squares_array_pack *pack);
-uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data);
-uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data);
-uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark, x_y_rel rel1, x_y_rel rel2, x_y_rel inv, x_y_rel sigma, uint8_t* rows, uint8_t* cols);
-
-// start the search on Q
-uint8_t compat_callback1(latin_square *_1, uint64_t _2, void *data)
-{
-  (void)_1, (void)_2;
-  iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
-  return iterate_over_all_square_array_callback(pack->Q, pack->s, compat_callback2, data);
-}
-
-uint8_t compat_callback2(latin_square *_1, uint64_t _2, void *data)
-{
-  static size_t mark_count_max = 0;
-
-  (void)_1, (void)_2;
-  iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
-
-  if (pack->mark.count > mark_count_max)
-    mark_count_max = pack->mark.count;
-
-#ifndef __NO_GUI__
-  if ((pack->refresh_frame & 0xff) == 0)
-  {
-    clear();
-    move(0, 0);
-    char buff[256] = {0};
-    gmp_snprintf(buff, 255, "%Zu arrays of latin squares tested so far", pack->perf->counter);
-    printw("%s\n", buff);
-    print_perfw(pack->perf, "arrays of latin squares");
-    addch('\n');
-    printw("mark.count: %"PRIu64", max: %"PRIu64"\n", pack->mark.count, mark_count_max);
-    refresh();
-  }
-  ++pack->refresh_frame;
-#endif
-
-  mpz_add_ui(pack->perf->counter, pack->perf->counter, 1);
-  mpz_add_ui(pack->perf->lcounter, pack->perf->lcounter, 1);
-
-  return !check_for_compatibility_in_latin_squares(pack->P, pack->Q, pack->M, pack->r, pack->s, pack->rels, pack->mark, pack->rel1, pack->rel2, pack->inv, pack->sigma, pack->rows, pack->cols);
-}
 
 /*
- * returns non-zero iff two compatible sets exist within the latin_square provided
+ * returns non-zero to indicate to continue
  * mark stores rels which have already fallen on different lines before
  */
-uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark, x_y_rel rel1, x_y_rel rel2, x_y_rel inv, x_y_rel sigma, uint8_t* rows, uint8_t* cols)
+uint8_t check_for_compatibility_in_latin_squares(latin_square *P, const uint32_t r, latin_square *Q, const uint32_t s, void* data)
 {
   const uint64_t n = r * s;
+
+  iterate_over_latin_squares_array_pack* pack = data;
+  da_sets rels = pack->rels;
+  da_sets mark = pack->mark;
+  pow_m_sqr* M = pack->M;
+  uint8_t* rows = pack->rows;
+  uint8_t* cols = pack->cols;
+  x_y_rel rel1 = pack->rel1;
+  x_y_rel rel2 = pack->rel2;
+  x_y_rel inv = pack->inv;
+  x_y_rel sigma = pack->sigma;
 
   da_foreach(rel_item *, rel, &rels)
   {
@@ -145,20 +112,20 @@ uint8_t check_for_compatibility_in_latin_squares(latin_square *P, latin_square *
 
       endwin();
 #endif
-      return 1; // quit the search
+      return 0; // quit the search
     }
 
     da_append(&mark, *rel);
   }
 
-  return 0;
+  return 1;
 }
 
-uint8_t find_set_compatible_latin_squares_array(latin_square *P, latin_square *Q, pow_m_sqr *M, const uint32_t r, const uint32_t s, da_sets rels, da_sets mark, perf_counter* perf)
+uint8_t find_set_compatible_latin_squares_array(const char* const base_file_name, const char* const name, pow_m_sqr *M, da_sets rels, da_sets mark, perf_counter* perf)
 {
-  const size_t n = r * s;
+  const size_t n = M->n;
 
-  iterate_over_latin_squares_array_pack pack = {.P = P, .Q = Q, M, .r = r, .s = s, .rels = rels, .mark = mark, .perf = perf};
+  iterate_over_latin_squares_array_pack pack = {.M = M, .rels = rels, .mark = mark, .perf = perf};
 
   pack.rel1 = calloc(n, sizeof(rel_item));
   pack.rel2 = calloc(n, sizeof(rel_item));
@@ -178,15 +145,15 @@ uint8_t find_set_compatible_latin_squares_array(latin_square *P, latin_square *Q
     exit(1);
   }
 
-  uint8_t ret = iterate_over_all_square_array_callback(P, r, compat_callback1, &pack);
+  uint8_t ret = action_on_all_latin_square_arrays(base_file_name, name, perf, check_for_compatibility_in_latin_squares, &pack);
 
   free(pack.rel1);
   free(pack.rel2);
   free(pack.inv);
   free(pack.sigma);
-
   free(pack.rows);
   free(pack.cols);
+
   return ret;
 }
 
@@ -250,6 +217,7 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b, size_t re
   timeout(5 * 1000); // in ms
   getch();
   timeout(-1);
+  printw("\n[OK] Moving onto latin square array search\n");
 #else
   printf("%"PRIu64"\n", rels.count);
 #endif
@@ -280,7 +248,7 @@ void search_pow_m_sqr_from_taxicabs(pow_m_sqr M, taxicab a, taxicab b, size_t re
   perf_counter_init(&perf, 1);
 
   da_sets mark = {.n = M.n};
-  int res = !find_set_compatible_latin_squares_array(P, Q, &M, a.r, a.s, rels, mark, &perf);
+  int res = find_set_compatible_latin_squares_array("./", "squares", &M, rels, mark, &perf);
 
   save_latin_squares(base_file_name, P, a.r, Q, a.s, "arrays");
 

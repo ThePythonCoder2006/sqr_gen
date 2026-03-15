@@ -6,12 +6,16 @@
 #include <string.h>
 #include <time.h>
 
-#include "taxicab_method.h"
-#include "latin_squares.h"
-#include "pow_m_sqr.h"
 #include "taxicab.h"
+#include "types.h"
+#include "serialize.h"
+#include "pow_m_sqr.h"
+#include "taxicab_method_common.h"
+#include "find_latin_squares.h"
+#include "probas.h"
 
 #include "nob.h"
+#include <ncurses.h>
 
 void get_file_name_identifier(char* const buff, size_t buff_sz, const char* const prefix, const char* const suffix)
 {
@@ -137,7 +141,7 @@ void fwrite_pow_m_sqr(FILE* f, pow_m_sqr M)
 void save_pow_m_sqr(const char* const base_file_name, pow_m_sqr M, const char* const M_name)
 {
   FILE* f = fopen(temp_sprintf("%s%s.pow_m_sqr", base_file_name, M_name), "w");
-  
+
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
@@ -155,7 +159,7 @@ void save_pow_m_sqr(const char* const base_file_name, pow_m_sqr M, const char* c
 /*
  * Format:
  * [   n   ][   count   ][ [   0   ][   1   ] ...items... [   count - 1   ] ]
- *  size_t     size_t     array of count arrays of n rel_items 
+ *  size_t     size_t     array of count arrays of n rel_items
  */
 
 void fwrite_rels(FILE* f, da_sets rels)
@@ -223,6 +227,19 @@ void fwrite_latin_square(FILE* f, latin_square P)
   return;
 }
 
+void fread_latin_square_size(FILE* f, uint32_t* n)
+{
+  fread(n, sizeof(*n), 1, f);
+  return;
+}
+
+void fread_latin_square_array(FILE* f, latin_square* P)
+{
+  fread(P->arr, sizeof(*P->arr), P->n * P->n, f);
+
+  return;
+}
+
 void save_latin_square(const char* const base_file_name, latin_square P, const char* const P_name)
 {
 
@@ -240,6 +257,26 @@ void save_latin_square(const char* const base_file_name, latin_square P, const c
   return;
 }
 
+void load_latin_square(const char*const base_file_name, latin_square* P, const char* const P_name)
+{
+  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, P_name), "r");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
+
+  fread_latin_square_size(f, &P->n);
+
+  latin_square_init(P, P->n);
+
+  fread_latin_square_array(f, P);
+
+  fclose(f);
+
+  return;
+}
+
 /*
  * Format:
  * [   r   ][   s   ][ [   P_0   ][   P_1   ] ...P...  [   P_{r - 1}   ] ]
@@ -247,6 +284,38 @@ void save_latin_square(const char* const base_file_name, latin_square P, const c
  * [ [   Q_0   ][   Q_1   ] ...Q...  [   Q_{s - 1}   ] ]
  *  array of s latin_squares
  */
+
+void fwrite_latin_squares(FILE* f, latin_square* P, uint32_t r, latin_square* Q, uint32_t s)
+{
+  fwrite(&r, sizeof(r), 1, f);
+  fwrite(&s, sizeof(s), 1, f);
+  for (size_t i = 0; i < r; ++i)
+    fwrite_latin_square(f, P[i]);
+  for (size_t j = 0; j < s; ++j)
+    fwrite_latin_square(f, Q[j]);
+
+  return;
+}
+
+// returns the sizes r, s of the latin squares arrays through the pointers
+void fread_latin_squares_sizes(FILE* f, uint32_t* r, uint32_t* s)
+{
+  fread(r, sizeof(*r), 1, f);
+  fread(s, sizeof(*s), 1, f);
+
+  return;
+}
+
+// r, s have to be the value from fread_sizes
+void read_latin_squares_arrays(FILE* f, latin_square* P, uint32_t r, latin_square* Q, uint32_t s)
+{
+  for (size_t i = 0; i < r; ++i)
+    fread_latin_square_array(f, P + i);
+  for (size_t j = 0; j < s; ++j)
+    fread_latin_square_array(f, Q + j);
+
+  return;
+}
 
 void save_latin_squares(const char*const base_file_name, latin_square* P, uint32_t r, latin_square* Q, uint32_t s, const char* const name)
 {
@@ -257,16 +326,182 @@ void save_latin_squares(const char*const base_file_name, latin_square* P, uint32
     exit(1);
   }
 
-  fwrite(&r, sizeof(r), 1, f);
-  fwrite(&s, sizeof(s), 1, f);
-  for (size_t i = 0; i < r; ++i)
-    fwrite_latin_square(f, P[i]);
-  for (size_t j = 0; j < s; ++j)
-    fwrite_latin_square(f, Q[j]);
+  fwrite_latin_squares(f, P, r, Q, s);
 
   fclose(f);
 
   return;
+}
+
+void fread_latin_squares_arrays(FILE* f, latin_square *P, uint32_t r, latin_square *Q, uint32_t s)
+{
+  for (size_t i = 0; i < r; ++i)
+  {
+    fread_latin_square_size(f, &P[i].n);
+    latin_square_init(P + i, P[i].n);
+    fread_latin_square_array(f, P + i);
+  }
+  for (size_t j = 0; j < s; ++j)
+  {
+    fread_latin_square_size(f, &Q[j].n);
+    latin_square_init(Q + j, Q[j].n);
+    fread_latin_square_array(f, Q + j);
+  }
+
+  return;
+}
+
+void load_latin_squares(const char*const base_file_name, latin_square** P, uint32_t* r, latin_square** Q, uint32_t* s, const char*const name)
+{
+  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "r");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
+
+  fread_latin_squares_sizes(f, r, s);
+
+  *P = calloc(*r, sizeof(**P));
+  *Q = calloc(*s, sizeof(**Q));
+  if (P == NULL || Q == NULL)
+  {
+    fprintf(stderr, "[OoM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  fread_latin_squares_arrays(f, *P, *r, *Q, *s);
+
+  fclose(f);
+
+  return;
+}
+
+/*
+ * Format:
+ * [   N   ][    r    ][    s    ][     [   P.arr, Q.arr   ], ...,          ]
+ *  size_t   uint32_t   uint32_t    array of N arrys of latin_squares contents
+ *  there r Ps each of size sxs
+ *  and s Qs each of size rxr
+ */
+
+uint8_t save_all_latin_squares_callback2(latin_square *_1, uint64_t _2, void *data);
+
+uint8_t save_all_latin_squares_callback1(latin_square *_1, uint64_t _2, void *data)
+{
+  (void)_1, (void)_2;
+  iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
+  return iterate_over_all_square_array_callback(pack->Q, pack->s, save_all_latin_squares_callback2, data);
+}
+
+uint8_t save_all_latin_squares_callback2(latin_square *_1, uint64_t _2, void *data)
+{
+  (void)_1, (void)_2;
+  iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
+
+  for (uint32_t i = 0; i < pack->r; ++i)
+    fwrite(pack->P[i].arr, sizeof(*pack->P[i].arr), pack->s*pack->s, pack->f);
+  for (uint32_t j = 0; j < pack->s; ++j)
+    fwrite(pack->Q[j].arr, sizeof(*pack->Q[j].arr), pack->r*pack->r, pack->f);
+
+  return 1;
+}
+
+void fwrite_all_latin_square_arrays(FILE* f, latin_square* P, latin_square* Q, uint32_t r, uint32_t s)
+{
+  iterate_over_latin_squares_array_pack pack = {.P = P, .Q = Q, .r = r, .s = s, .f = f};
+
+  size_t count = number_of_latin_squares(r, s);
+  fwrite(&count, sizeof(count), 1, f);
+  fwrite(&r, sizeof(r), 1, f);
+  fwrite(&s, sizeof(s), 1, f);
+  iterate_over_all_square_array_callback(P, r, save_all_latin_squares_callback1, &pack);
+
+  return;
+}
+
+void save_all_latin_square_arrays(const char*const base_file_name, latin_square* P, latin_square* Q, uint32_t r, uint32_t s, const char*const name)
+{
+  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "w");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
+
+  fwrite_all_latin_square_arrays(f, P, Q, r, s);
+
+  fclose(f);
+
+  return;
+}
+
+#define REFRESH_RATE (100)
+/*
+ * returns 1 upon early breaking
+ */
+uint8_t action_on_all_latin_square_arrays(const char*const base_file_name, const char*const name, perf_counter* perf, action func, void* data)
+{
+  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "r");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
+
+  uint8_t ret = 0;
+  size_t count;
+  uint32_t r, s;
+  fread(&count, sizeof(count), 1, f);
+  fread(&r, sizeof(r), 1, f);
+  fread(&s, sizeof(s), 1, f);
+
+  latin_square *P = calloc(r, sizeof(latin_square));
+  latin_square *Q = calloc(s, sizeof(latin_square));
+  if (P == NULL || Q == NULL)
+  {
+    fprintf(stderr, "[OoM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+
+  for (uint32_t i = 0; i < r; ++i)
+    latin_square_init(P + i, s);
+  for (uint32_t j = 0; j < s; ++j)
+    latin_square_init(Q + j, r);
+
+  for (size_t idx = 0; idx < count; ++idx)
+  {
+    for (uint32_t i = 0; i < r; ++i)
+      fread_latin_square_array(f, P + i);
+    for (uint32_t j = 0; j < s; ++j)
+      fread_latin_square_array(f, Q + j);
+
+    if (!(*func)(P, r, Q, s, data))
+    {
+      ret = 1;
+      break;
+    }
+
+    if (idx % REFRESH_RATE == 0)
+    {
+      clear();
+      printw("progress: %zu / %zu = %.2f%%\n", idx, count, ((float) idx) / count * 100.0);
+      mpz_set_ui(perf->counter, idx);
+      mpz_set_ui(perf->lcounter, idx);
+      print_perfw(perf, "lsquares array");
+      refresh();
+    }
+  }
+
+  for (uint32_t i = 0; i < r; ++i)
+    latin_square_clear(P + i);
+  for (uint32_t j = 0; j < s; ++j)
+    latin_square_clear(Q + j);
+
+  free(P);
+  free(Q);
+  fclose(f);
+  return ret;
 }
 
 // ------------ timings ---------------------

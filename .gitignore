@@ -62,12 +62,12 @@ dhat.out.*
 
 nob.old
 nob
-nob_test
-nob_test.old
+temp.c
 
 # output files
 
 output/*
+squares.latin_square
 
 # vim files
 *~
