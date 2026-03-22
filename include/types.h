@@ -74,6 +74,8 @@ typedef struct da_sets_s
   uint32_t n; // size of each set
 } da_sets;
 
+typedef uint8_t (*action)(latin_square*, uint32_t, latin_square*, uint32_t, void*);
+
 extern const uint64_t A000479[];
 
 #endif //__TYPES__

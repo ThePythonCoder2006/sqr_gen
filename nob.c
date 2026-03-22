@@ -44,7 +44,6 @@ int cc_flags(void)
   cmd_append(&cmd, "-Wall");
   cmd_append(&cmd, "-Wextra");
   cmd_append(&cmd, "-pedantic");
-  cmd_append(&cmd, "-pthread");
 
   if (debug)
     cmd_append(&cmd, "-ggdb", "-O0");
@@ -58,14 +57,20 @@ int cc_flags(void)
   return 1;
 }
 
-int l_flags(void)
+int i_flags(void)
 {
+  cmd_append(&cmd, "-pthread");
   cmd_append(&cmd, "-I" IDIR);
   cmd_append(&cmd, "-I.");
 
+  return 1;
+}
+
+
+int l_flags(void)
+{
   cmd_append(&cmd, "-lm");
   cmd_append(&cmd, "-lcurses");
-  cmd_append(&cmd, "-lgmp");
   cmd_append(&cmd, "-pthread");
 
   return 1;
@@ -161,6 +166,7 @@ int main(int argc, char** argv)
   cmd_append(&cmd, "-o", trgt);
   cc_flags();
   l_flags();
+  cmd_append(&cmd, "-lgmp");
 
   if (!cmd_run(&cmd)) return 1;
 
@@ -256,8 +262,8 @@ bool c_to_o(Nob_Walk_Entry entry)
 
   cmd_append(&cmd, "-o", buff);
 
-  cc_flags();
-  l_flags();
+  (void) cc_flags();
+  (void) i_flags();
 
   if (!cmd_run(&cmd)) return false;
 

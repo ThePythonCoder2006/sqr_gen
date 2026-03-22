@@ -259,11 +259,11 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
 
   if (progress == T.r * T.s)
   {
-    mpz_add_ui(perf->counter, perf->counter, 1);
+    perf_counter_tick(perf);
     return is_taxicab(T);
   }
 
-  if ((mpz_get_ui(perf->counter) & 0xffffff) == 0 && mpz_cmp_ui(perf->counter, 0) != 0)
+  if ((perf->counter & 0xffffff) == 0 && perf->counter != 0)
   {
 #ifndef __NO_GUI__
     move(0, 0);
@@ -272,9 +272,8 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     printw("average speed = ");
     print_perfw(perf, "taxicabs");
     mvtaxicab_print(1, 0, T);
-    char buff[256] = {0};
-    gmp_snprintf(buff, 255, "%Zu taxicabs have been rejected so far", perf->counter);
-    printw("%s.\n Current time: %lfs", buff, timer_stop(&(perf->time)));
+    printw("%zu taxicabs have been rejected so far\n", perf->counter);
+    printw("Current time: %lfs", timer_stop(&(perf->time)));
     refresh();
 #endif
   }
@@ -291,14 +290,18 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     mpz_init_set_si(diff, mu - partial_sum);
     if (mpz_cmp_ui(diff, 0) < 0)
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      size_t skipped = potential_taxicabs_from_progress(T.r, T.s, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       mpz_clear(diff);
       return 0;
     }
 
     if (!mpz_root(diff, diff, T.d))
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      size_t skipped = potential_taxicabs_from_progress(T.r, T.s, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       mpz_clear(diff);
       return 0;
     }
@@ -311,7 +314,9 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     // printf("%llu", GET_AS_VEC(T, progress));
     if (heat_map[TAXI_GET_AS_VEC(T, progress)])
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      size_t skipped = potential_taxicabs_from_progress(T.r, T.s, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       continue;
     }
     heat_map[TAXI_GET_AS_VEC(T, progress)] = 1;
@@ -319,13 +324,17 @@ int search_taxicab(taxicab T, uint64_t X, uint64_t progress, uint8_t *heat_map, 
     uint8_t flags = is_valid_partial_taxicab(T, progress);
     if (flags == PARTIAL_TAXICAB_NEXT)
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      size_t skipped = potential_taxicabs_from_progress(T.r, T.s, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       heat_map[TAXI_GET_AS_VEC(T, progress)] = 0;
       continue;
     }
     else if (flags == PARTIAL_TAXICAB_BREAK)
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_taxicabs_from_progress(T.r, T.s, X, progress));
+      size_t skipped = potential_taxicabs_from_progress(T.r, T.s, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       heat_map[TAXI_GET_AS_VEC(T, progress)] = 0;
       break;
     }

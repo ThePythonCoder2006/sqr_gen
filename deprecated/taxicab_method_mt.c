@@ -51,8 +51,8 @@ uint8_t check_for_compatibility_in_latin_squares_mt(latin_square *P, latin_squar
 
 void print_mt_stats(mt_context *ctx, perf_counter *perf)
 {
-  mpz_set_ui(perf->counter, ctx->total_iterations);
-  mpz_set_ui(perf->lcounter, ctx->total_iterations);
+  perf->counter  = ctx->total_iterations;
+  perf->lcounter = ctx->total_iterations;
 #ifndef __NO_GUI__
   // Print header
   printw("\rTotal iterations: %lu\n", (unsigned long)ctx->total_iterations);
@@ -179,8 +179,8 @@ uint8_t compat_callback1_mt(latin_square *P_start, uint64_t _2, void *data)
     .Q = NULL
   };
 
-  // Allocate thread-local Q array for this iteration
-  latin_square *Q_local = shared_pack->mt_ctx->Q_arrays[g_current_thread_id];
+  assert(0 && "This code has not been touched since the refactor which removed its use");
+  latin_square *Q_local = NULL;
 
   // Iterate over Q using the thread-local Q array
   return iterate_over_all_square_array_callback(Q_local, shared_pack->s, compat_callback2_mt, &local_pack);
@@ -256,7 +256,7 @@ uint8_t find_set_compatible_latin_squares_array_mt(latin_square *P, latin_square
   const size_t n = r * s;
 
   mt_context mt_ctx;
-  mt_context_init_with_Q(&mt_ctx, max_threads, s, r);
+  mt_context_init(&mt_ctx, max_threads);
 
   iterate_over_latin_squares_array_pack_mt pack = {
     .P = P,

@@ -17,7 +17,6 @@
  *                sum= s sum= s   ...   sum= s
  */
 
-#include <gmp.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -381,7 +380,7 @@ enum regime_e
 typedef struct regime_data_s
 {
   double start_time, tot_time;
-  mpf_t speed, peak_speed, peak_local_speed;
+  double speed, peak_speed, peak_local_speed;
 } regime_data;
 
 typedef struct
@@ -639,8 +638,7 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
     if (!is_in_hshtbl(pack->found, pack->items2, n))
     {
       retval = COLLISION_FOUND;
-      mpz_add_ui(perf->counter, perf->counter, 1); // add to number of found sets
-      mpz_add_ui(perf->lcounter, perf->lcounter, 1); // add to number of found sets
+      perf_counter_tick(perf);
       if (!(*f)(pack->selected, n, data))
       {
         retval = SIGSTOP;
@@ -790,8 +788,7 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
     {
       // sum was magic
       hshtbl_insert(&pack->found, pack->items, pack->selected, n, set_items_sqared_sum(pack->items, n), n);
-      mpz_add_ui(perf->counter, perf->counter, 1);
-      mpz_add_ui(perf->lcounter, perf->lcounter, 1);
+      perf_counter_tick(perf);
       if (!(*f)(pack->selected, n, data))
         return SIGSTOP;
     }
@@ -862,31 +859,26 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
 #endif
     }
 
-#ifndef __NO_GUI__
     if (refresh_frames == 0)
     {
+#ifndef __NO_GUI__
       clear();
       move(0, 0);
       for (uint32_t i = 0; i < n/2; ++i)
-      {
         printw("%7"PRIu64"/%7"PRIu64", ", pack.tables[i].count, pack.tables[i].capacity);
-      }
       addch('\n');
       printw("tot: %"PRIu64"/ %"PRIu64": %.2f%%\n", tables_tot_count, tables_tot_capa, 100.0 * (double) tables_tot_count / (double) tables_tot_capa);
 
-      char buff[256] = {0};
-      gmp_snprintf(buff, 255, "tries, found: %7"PRIu64", %Zu/%u", tries, perf->counter, requiered_sets);
-      printw("%s\n", buff);
+      printw("tries, found: %7"PRIu64", %zu/%zu\n", tries, perf->counter, requiered_sets);
       print_perfw(perf, "sets");
       refresh();
-    }
 #else
-    if (refresh_frames == 0)
-    {
-      printf("\rtot_count = %e", (double)tables_tot_count);
-      fflush(stdout);
-    }
+      putchar('\r');
+      printf("tot: %"PRIu64"/ %"PRIu64": %.2f%%", tables_tot_count, tables_tot_capa, 100.0 * (double) tables_tot_count / (double) tables_tot_capa);
+
+      printw("tries, found: %7"PRIu64", %zu/%zu", tries, perf->counter, requiered_sets);
 #endif
+    }
     ++refresh_frames;
   } while (ret >= 0);
 

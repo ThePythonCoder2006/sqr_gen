@@ -8,32 +8,16 @@
 #include <stdio.h>
 #include <assert.h>
 
+// for extracting d-th root
+#include <gmp.h>
+
 #include "pow_m_sqr.h"
 #include "timer.h"
 #include "perf_counter.h"
 #include "taxicab.h"
-#include "latin_squares.h"
 #include "arithmetic.h"
 
-#include "gmp.h"
 #include <ncurses.h>
-
-/*
- * sums the entries of the j-th column of M into ret
- */
-// void pow_m_sqr_sum_col(mpz_t ret, pow_m_sqr M, uint64_t j)
-// {
-//   mpz_t curr;
-//   mpz_init(curr);
-//   mpz_set_ui(ret, 0);
-//   for (uint64_t i = 0; i < M.n; ++i)
-//   {
-//     mpz_ui_pow_ui(curr, M_SQR_GET_AS_MAT(M, i, j), M.d);
-//     mpz_add(ret, ret, curr);
-//   }
-//   mpz_clear(curr);
-//   return;
-// }
 
 uint64_t pow_m_sqr_sum_col(pow_m_sqr M, uint64_t j)
 {
@@ -44,23 +28,6 @@ uint64_t pow_m_sqr_sum_col(pow_m_sqr M, uint64_t j)
   return acc;
 }
 
-/*
- * sums the entries of the i-th row of M into ret
- */
-// void pow_m_sqr_sum_row(mpz_t ret, pow_m_sqr M, uint64_t i)
-// {
-//   mpz_t curr;
-//   mpz_init(curr);
-//   mpz_set_ui(ret, 0);
-//   for (uint64_t j = 0; j < M.n; ++j)
-//   {
-//     mpz_ui_pow_ui(curr, M_SQR_GET_AS_MAT(M, i, j), M.d);
-//     mpz_add(ret, ret, curr);
-//   }
-//   mpz_clear(curr);
-//   return;
-// }
-
 uint64_t pow_m_sqr_sum_row(pow_m_sqr M, uint64_t i)
 {
   uint64_t acc = 0;
@@ -70,20 +37,6 @@ uint64_t pow_m_sqr_sum_row(pow_m_sqr M, uint64_t i)
   return acc;
 }
 
-// void pow_m_sqr_sum_diag1(mpz_t ret, pow_m_sqr M)
-// {
-//   mpz_t curr;
-//   mpz_init(curr);
-//   mpz_set_ui(ret, 0);
-//   for (uint64_t k = 0; k < M.n; ++k)
-//   {
-//     mpz_ui_pow_ui(curr, M_SQR_GET_AS_MAT(M, k, k), M.d);
-//     mpz_add(ret, ret, curr);
-//   }
-//   mpz_clear(curr);
-//   return;
-// }
-
 uint64_t pow_m_sqr_sum_diag1(pow_m_sqr M)
 {
   uint64_t acc = 0;
@@ -92,20 +45,6 @@ uint64_t pow_m_sqr_sum_diag1(pow_m_sqr M)
 
   return acc;
 }
-
-// void pow_m_sqr_sum_diag2(mpz_t ret, pow_m_sqr M)
-// {
-//   mpz_t curr;
-//   mpz_init(curr);
-//   mpz_set_ui(ret, 0);
-//   for (uint64_t k = 0; k < M.n; ++k)
-//   {
-//     mpz_ui_pow_ui(curr, M_SQR_GET_AS_MAT(M, k, M.n - k - 1), M.d);
-//     mpz_add(ret, ret, curr);
-//   }
-//   mpz_clear(curr);
-//   return;
-// }
 
 uint64_t pow_m_sqr_sum_diag2(pow_m_sqr M)
 {
@@ -305,7 +244,6 @@ int is_valid_partial_pow_m_sqr(pow_m_sqr M, uint64_t progress)
     if (col == 1)
     {
       curr = pow_m_sqr_sum_diag2(M);
-      // gmp_printf("%Zd, %Zd\n", mu, curr);
       int cmp = mu - curr;
       ACT_ON_CMP(cmp);
     }
@@ -360,11 +298,11 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
 
   if (progress == base.n * base.n)
   {
-    mpz_add_ui(perf->counter, perf->counter, 1);
+    perf_counter_tick(perf);
     return is_pow_m_sqr(base);
   }
 
-  if ((mpz_get_ui(perf->counter) & 0xffffff) == 0 && mpz_cmp_ui(perf->counter, 0) != 0)
+  if ((perf->counter & 0xffffff) == 0 && perf->counter != 0)
   {
 #ifndef __NO_GUI__
     move(0, 0);
@@ -373,15 +311,14 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     printw("average speed = ");
     print_perfw(perf, "grids");
     mvpow_m_sqr_printw(1, 0, base);
-    char buff[256] = {0};
-    gmp_snprintf(buff, 255, "%Zu boards have been rejected so far", perf->counter);
-    printw("%s.\n Current time: %lfs", buff, timer_stop(&(perf->time)));
+    printw("%zu boards have been rejected so far\n", perf->counter);
+    printw("Current time: %lfs", timer_stop(&(perf->time)));
     refresh();
 #else
     printf("average speed = ");
     printf_perf(perf, "grids");
     pow_m_sqr_printf(base);
-    gmp_printf("%Zu boards have been rejected so far.\n Current time: %lfs\n", perf->counter, timer_stop(&perf->time));
+    printf("%zu boards have been rejected so far.\n Current time: %lfs\n", perf->counter, timer_stop(&perf->time));
 #endif
   }
 
@@ -397,7 +334,9 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     mpz_init_set_si(diff, mu - partial_sum);
     if (!mpz_root(diff, diff, base.d))
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_boards_from_progress(base.n, X, progress));
+      size_t skipped = potential_boards_from_progress(base.n, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       mpz_clear(diff);
       return 0;
     }
@@ -410,7 +349,9 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     // printf("%"PRIu64"", M_SQR_GET_AS_VEC(base, progress));
     if (heat_map[M_SQR_GET_AS_VEC(base, progress)])
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_boards_from_progress(base.n, X, progress));
+      size_t skipped = potential_boards_from_progress(base.n, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       continue;
     }
     heat_map[M_SQR_GET_AS_VEC(base, progress)] = 1;
@@ -418,13 +359,17 @@ int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *hea
     uint8_t flags = is_valid_partial_pow_m_sqr(base, progress);
     if (flags == PARTIAL_M_SQR_NEXT)
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_boards_from_progress(base.n, X, progress));
+      size_t skipped = potential_boards_from_progress(base.n, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       heat_map[M_SQR_GET_AS_VEC(base, progress)] = 0;
       continue;
     }
     else if (flags == PARTIAL_M_SQR_BREAK)
     {
-      mpz_add_ui(perf->counter, perf->counter, potential_boards_from_progress(base.n, X, progress));
+      size_t skipped = potential_boards_from_progress(base.n, X, progress);
+      perf->counter += skipped;
+      perf->lcounter += skipped;
       heat_map[M_SQR_GET_AS_VEC(base, progress)] = 0;
       break;
     }

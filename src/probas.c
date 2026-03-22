@@ -9,6 +9,7 @@
 #include "pow_m_sqr.h"
 #include "arithmetic.h"
 
+// doing factorial calculations
 #include "gmp.h"
 
 #define PI 3.1415926535897932384626

@@ -385,16 +385,16 @@ void load_latin_squares(const char*const base_file_name, latin_square** P, uint3
  *  and s Qs each of size rxr
  */
 
-uint8_t save_all_latin_squares_callback2(latin_square *_1, uint64_t _2, void *data);
+static uint8_t callback2(latin_square *_1, uint64_t _2, void *data);
 
-uint8_t save_all_latin_squares_callback1(latin_square *_1, uint64_t _2, void *data)
+static uint8_t callback1(latin_square *_1, uint64_t _2, void *data)
 {
   (void)_1, (void)_2;
   iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
-  return iterate_over_all_square_array_callback(pack->Q, pack->s, save_all_latin_squares_callback2, data);
+  return iterate_over_all_square_array_callback(pack->Q, pack->s, callback2, data);
 }
 
-uint8_t save_all_latin_squares_callback2(latin_square *_1, uint64_t _2, void *data)
+static uint8_t callback2(latin_square *_1, uint64_t _2, void *data)
 {
   (void)_1, (void)_2;
   iterate_over_latin_squares_array_pack *pack = (iterate_over_latin_squares_array_pack *)data;
@@ -415,7 +415,7 @@ void fwrite_all_latin_square_arrays(FILE* f, latin_square* P, latin_square* Q, u
   fwrite(&count, sizeof(count), 1, f);
   fwrite(&r, sizeof(r), 1, f);
   fwrite(&s, sizeof(s), 1, f);
-  iterate_over_all_square_array_callback(P, r, save_all_latin_squares_callback1, &pack);
+  iterate_over_all_square_array_callback(P, r, callback1, &pack);
 
   return;
 }
@@ -484,12 +484,19 @@ uint8_t action_on_all_latin_square_arrays(const char*const base_file_name, const
 
     if (idx % REFRESH_RATE == 0)
     {
+#ifndef __NO_GUI__
       clear();
       printw("progress: %zu / %zu = %.2f%%\n", idx, count, ((float) idx) / count * 100.0);
-      mpz_set_ui(perf->counter, idx);
-      mpz_set_ui(perf->lcounter, idx);
+      perf->counter = idx;
+      perf->lcounter = idx;
       print_perfw(perf, "lsquares array");
       refresh();
+#else
+      printf("progress: %zu / %zu = %.2f%%\n", idx, count, ((float) idx) / count * 100.0);
+      perf->counter = idx;
+      perf->lcounter = idx;
+      printf_perf(perf, "lsquares array");
+#endif
     }
   }
 

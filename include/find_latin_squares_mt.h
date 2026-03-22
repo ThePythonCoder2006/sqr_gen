@@ -41,10 +41,6 @@ typedef struct {
     uint64_t display_mark_count;
     perf_counter *display_perf;
 
-    // Pre-allocated Q arrays for taxicab search (one per thread)
-    latin_square **Q_arrays;
-    uint32_t Q_len;
-    uint32_t Q_elem_size;
 } mt_context;
 
 void mt_context_init(mt_context *ctx, size_t max_threads);

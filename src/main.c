@@ -123,7 +123,7 @@ int parse_args(int argc, char** argv)
       printf("-n, --new-taxicabs <p>  Find new taxicabs with expected number of diagonals at least p");
       printf("-regen                  regenerates the file holding the latin square arrays list\n");
       printf("  -h, --help        Show this help message\n");
-      printf("\nRequired sets: Number of compatible sets to find (default: %llu)\n", REQUIERED_SETS);
+      printf("\nRequired sets: Number of compatible sets to find (default: %lu)\n", REQUIERED_SETS);
       return 0;
     }
     else
@@ -196,7 +196,11 @@ int main(int argc, char **argv)
   show_starting_stats_on_square(a, b, sq);
 
   if (use_multithreading)
-    search_pow_m_sqr_from_taxicabs_mt(sq, a, b, requiered_sets, max_threads);
+  {
+    fprintf(stderr, "[ERROR] Multithreading is Not yet implemented\n");
+    exit(1);
+    // search_pow_m_sqr_from_taxicabs_mt(sq, a, b, requiered_sets, max_threads);
+  }
   else
     search_pow_m_sqr_from_taxicabs(sq, a, b, requiered_sets);
 
