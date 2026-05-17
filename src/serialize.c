@@ -17,6 +17,8 @@
 #include "nob.h"
 #include <ncurses.h>
 
+#define FNAME(base, file, ext) temp_sprintf("%s%s%s", base, file, (file[0] == '\0') ? "" : ext)
+
 void get_file_name_identifier(char* const buff, size_t buff_sz, const char* const prefix, const char* const suffix)
 {
   time_t time_tmp = 0;
@@ -66,8 +68,8 @@ void fwrite_taxicab(FILE* f, taxicab T)
 
 void save_taxicabs(const char* const base_file_name, taxicab a, const char* const a_name, taxicab b, const char* const b_name)
 {
-  FILE* fa = fopen(temp_sprintf("%s%s.taxicab", base_file_name, a_name), "w");
-  FILE* fb = fopen(temp_sprintf("%s%s.taxicab", base_file_name, b_name), "w");
+  FILE* fa = fopen(FNAME(base_file_name, a_name, ".taxicab"), "w");
+  FILE* fb = fopen(FNAME(base_file_name, b_name, ".taxicab"), "w");
 
   if (fa == NULL || fb == NULL)
   {
@@ -93,6 +95,7 @@ void fread_taxicab(FILE* f, taxicab* T)
   if (T->arr == NULL)
   {
     fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
   }
 
   fread(T->arr, sizeof(*T->arr), T->r * T->s, f);
@@ -102,8 +105,8 @@ void fread_taxicab(FILE* f, taxicab* T)
 
 void load_taxicabs(const char* const base_file_name, taxicab* a, const char* const a_name, taxicab* b, const char* const b_name)
 {
-  FILE* fa = fopen(temp_sprintf("%s%s.taxicab", base_file_name, a_name), "r");
-  FILE* fb = fopen(temp_sprintf("%s%s.taxicab", base_file_name, b_name), "r");
+  FILE* fa = fopen(FNAME(base_file_name, a_name, ".taxicab"), "r");
+  FILE* fb = fopen(FNAME(base_file_name, b_name, ".taxicab"), "r");
 
   if (fa == NULL || fb == NULL)
   {
@@ -120,6 +123,41 @@ void load_taxicabs(const char* const base_file_name, taxicab* a, const char* con
   return;
 }
 
+void flatex_taxicab(FILE* f, taxicab a)
+{
+  size_t sum = taxicab_sum_row(a, 0);
+
+  fprintf(f, "\\begin{array}{r");
+  for (size_t _ = 0; _ < a.s; ++_)
+    fprintf(f, "cc");
+  fprintf(f, "}\n%zu", sum);
+  for (size_t i = 0; i < a.r; ++i)
+  {
+    fprintf(f, "&=&");
+    for (size_t j = 0; j < a.s; ++j)
+      fprintf(f, "%d^%d%s", TAXI_GET_AS_MAT(a, i, j), a.d, j < a.s - 1 ? " &+& " : "");
+    fprintf(f, "\\\\\n");
+  }
+  fprintf(f, "\\end{array}\n");
+
+  return;
+}
+
+void latex_taxicab(const char* const base_file_name, taxicab a, const char* const lname)
+{
+  FILE* f = fopen(FNAME(base_file_name, lname, ".pow_m_sqr"), "w");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
+
+  flatex_taxicab(f, a);
+
+  fclose(f);
+  return;
+}
+
 // ---------------- pow_m_sqr --------------
 
 /*
@@ -132,7 +170,7 @@ void fwrite_pow_m_sqr(FILE* f, pow_m_sqr M)
 {
   fwrite(&M.n, sizeof(M.n), 1, f);
   fwrite(&M.d, sizeof(M.d), 1, f);
-  fwrite(M.rows, sizeof(*M.arr), M.n, f);
+  fwrite(M.rows, sizeof(*M.rows), M.n, f);
   fwrite(M.cols, sizeof(*M.cols), M.n, f);
   fwrite(M.arr, sizeof(*M.arr), M.n * M.n, f);
   return;
@@ -140,7 +178,7 @@ void fwrite_pow_m_sqr(FILE* f, pow_m_sqr M)
 
 void save_pow_m_sqr(const char* const base_file_name, pow_m_sqr M, const char* const M_name)
 {
-  FILE* f = fopen(temp_sprintf("%s%s.pow_m_sqr", base_file_name, M_name), "w");
+  FILE* f = fopen(FNAME( base_file_name, M_name, ".pow_m_sqr"), "w");
 
   if (f == NULL)
   {
@@ -149,6 +187,179 @@ void save_pow_m_sqr(const char* const base_file_name, pow_m_sqr M, const char* c
   }
 
   fwrite_pow_m_sqr(f, M);
+
+  fclose(f);
+  return;
+}
+
+void fread_pow_m_sqr(FILE* f, pow_m_sqr* M)
+{
+  fread(&M->n,   sizeof(M->n),     1,         f);
+  fread(&M->d,   sizeof(M->d),     1,         f);
+  M->rows = calloc(M->n, sizeof(*M->rows));
+  M->cols = calloc(M->n, sizeof(*M->cols));
+  M->arr = calloc(M->n * M->n, sizeof(*M->arr));
+  if (M->arr == NULL || M->cols == NULL || M->rows == NULL)
+  {
+    fprintf(stderr, "[OOM] Buy more RAM LOL!!\n");
+    exit(1);
+  }
+  fread(M->rows, sizeof(*M->rows),  M->n,       f);
+  fread(M->cols, sizeof(*M->cols), M->n,       f);
+  fread(M->arr,  sizeof(*M->arr),  M->n * M->n, f);
+  return;
+}
+
+void load_pow_m_sqr(const char* const base_file_name, pow_m_sqr* M, const char* const M_name)
+{
+  FILE* f = fopen(FNAME(base_file_name, M_name, ".pow_m_sqr"), "r");
+
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
+
+  fread_pow_m_sqr(f, M);
+
+  fclose(f);
+  return;
+}
+
+void latex_pow_m_sqr(const char* const base_file_name, pow_m_sqr M, const char* const lname, const size_t r, const size_t s)
+{
+  FILE* f = fopen(FNAME(base_file_name, lname, ".pow_m_sqr"), "w");
+  if (f == NULL)
+  {
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
+  }
+
+  typeof(M.rows) rows_inv = calloc(M.n, sizeof(*M.rows));
+  typeof(M.cols) cols_inv = calloc(M.n, sizeof(*M.cols));
+
+  for (size_t idx = 0; idx < M.n; ++idx)
+  {
+    rows_inv[M.rows[idx]] = idx;
+    cols_inv[M.cols[idx]] = idx;
+  }
+
+  /*
+   * print the unhighlighted version
+   * DO NOT follow the rows/cols permutation in M
+   */
+
+  fprintf(f, "\\begin{frame}\n"
+             "  \\[\n"
+             "    \\hspace{-3.5mm}\n"
+             "    \\fontsize{4}{7}\\selectfont\n"
+             "    \\setlength\\arraycolsep{.5pt}\n"
+             "    \\begin{array}{");
+  for (size_t j = 0; j < M.n; ++j)
+    fprintf(f, "%sc", (j % s == 0 && j > 0) ? "|" : "\0");
+
+  fprintf(f, "}\n");
+  for (size_t i = 0; i < M.n; ++i)
+  {
+    fprintf(f, "      ");
+    for (size_t j = 0; j < M.n; ++j)
+    {
+      if (i == j || i == M.n - j - 1)
+        // hightlight to keep spacing correct
+        fprintf(f, "\\mathcolorbox{white}{%"PRIu64"^%d}%s",
+                         GET_AS_MAT(M.arr, i, j, M.n),        // use GET_AS_MAT to not care about the M.rows and M.cols permutations
+                         M.d, (j < M.n - 1) ? " & " : ""); // no alignement anchor on the last one of the row
+      else
+        fprintf(f, "%"PRIu64"^%d%s",
+                         GET_AS_MAT(M.arr, i, j, M.n),     // use GET_AS_MAT to not care about the M.rows and M.cols permutations
+                         M.d, (j < M.n - 1) ? " & " : ""); // no alignement anchor on the last one of the row
+    }
+    fprintf(f, "\\\\\n%s", ((i + 1) % r == 0 && i < M.n - 1) ? "\\hline\n" : "");
+  }
+  fprintf(f, "    \\end{array}\n"
+                             "  \\]\n"
+                             "\\end{frame}\n\n");
+
+
+  /*
+   * print the version where the future diagonals are gonna be
+   * DO NOT follow the rows/cols permutation in M
+   */
+
+  fprintf(f, "\\begin{frame}[noframenumbering]\n"
+             "  \\[\n"
+             "    \\hspace{-3.5mm}\n"
+             "    \\fontsize{4}{7}\\selectfont\n"
+             "    \\setlength\\arraycolsep{.5pt}\n"
+             "    \\begin{array}{");
+  for (size_t j = 0; j < M.n; ++j)
+    fprintf(f, "%sc", (j % s == 0 && j > 0) ? "|" : "\0");
+
+  fprintf(f, "}\n");
+  for (size_t i = 0; i < M.n; ++i)
+  {
+    fprintf(f, "      ");
+    for (size_t j = 0; j < M.n; ++j)
+    {
+      if (rows_inv[i] == cols_inv[j] || rows_inv[i] == M.n - cols_inv[j] - 1)
+        fprintf(f, "\\mathcolorbox{%s}{%"PRIu64"^%d}%s",
+                         (rows_inv[i] == cols_inv[j]) ? (rows_inv[i] == M.n -  cols_inv[j] - 1) ? "green"  // middle
+                                                                                        : "yellow" // main
+                                                  : "cyan",                                        // anti
+                         GET_AS_MAT(M.arr, i, j, M.n),                                             // use GET_AS_MAT to not care about the M.rows and M.cols permutations
+                         M.d, (j < M.n - 1) ? " & " : "");                                         // no alignement anchor on the last one of the row
+      else
+        // dont hightlight
+        fprintf(f, "%"PRIu64"^%d%s",
+                         GET_AS_MAT(M.arr, i, j, M.n),     // use GET_AS_MAT to not care about the M.rows and M.cols permutations
+                         M.d, (j < M.n - 1) ? " & " : ""); // no alignement anchor on the last one of the row
+    }
+    fprintf(f, "\\\\\n%s", ((i + 1) % r == 0 && i < M.n - 1) ? "\\hline\n" : "");
+  }
+  fprintf(f, "    \\end{array}\n"
+                             "  \\]\n"
+                             "\\end{frame}\n\n");
+
+  /*
+   * print the permuted version with diagonals hightlighted
+   */
+
+  fprintf(f, "\\begin{frame}[noframenumbering]\n"
+             "  \\[\n"
+             "    \\hspace{-3.5mm}\n"
+             "    \\fontsize{4}{7}\\selectfont\n"
+             "    \\setlength\\arraycolsep{.5pt}\n"
+             "    \\begin{array}{");
+  for (size_t j = 0; j < M.n; ++j)
+    fprintf(f, "%sc", (j % s == 0 && j > 0) ? "|" : "\0");
+
+  fprintf(f, "}\n");
+  for (size_t i = 0; i < M.n; ++i)
+  {
+    fprintf(f, "      ");
+    for (size_t j = 0; j < M.n; ++j)
+    {
+      if (i == j || i == M.n - j - 1)
+        fprintf(f, "\\mathcolorbox{%s}{%"PRIu64"^%d}%s",
+                         (i == j) ? (i == M.n -  j - 1) ? "green"  // middle
+                                                        : "yellow" // main
+                                  : "cyan",                        // anti
+                         M_SQR_GET_AS_MAT(M, i, j),                // use GET_AS_MAT to not care about the M.rows and M.cols permutations
+                         M.d, (j < M.n - 1) ? " & " : "");         // no alignement anchor on the last one of the row
+      else
+        // dont hightlight
+        fprintf(f, "%"PRIu64"^%d%s",
+                         M_SQR_GET_AS_MAT(M, i, j),     // use GET_AS_MAT to not care about the M.rows and M.cols permutations
+                         M.d, (j < M.n - 1) ? " & " : ""); // no alignement anchor on the last one of the row
+    }
+    fprintf(f, "\\\\\n%s", ((i + 1) % r == 0 && i < M.n - 1) ? "\\hline\n" : "");
+  }
+  fprintf(f, "    \\end{array}\n"
+                             "  \\]\n"
+                             "\\end{frame}\n\n");
+
+  free(rows_inv);
+  free(cols_inv);
 
   fclose(f);
   return;
@@ -173,7 +384,7 @@ void fwrite_rels(FILE* f, da_sets rels)
 
 void save_rels(const char* const base_file_name, da_sets rels, const char* const rels_name)
 {
-  FILE* f = fopen(temp_sprintf("%s%s.rels", base_file_name, rels_name), "w");
+  FILE* f = fopen(FNAME(base_file_name, rels_name, ".rels"), "w");
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
@@ -197,7 +408,7 @@ void fread_rels(FILE* f, da_sets* rels)
 
 void load_rels(const char* const base_file_name, da_sets* rels, const char* const rels_name)
 {
-  FILE* f = fopen(temp_sprintf("%s%s.rels", base_file_name, rels_name), "r");
+  FILE* f = fopen(FNAME(base_file_name, rels_name, ".rels"), "r");
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
@@ -243,7 +454,7 @@ void fread_latin_square_array(FILE* f, latin_square* P)
 void save_latin_square(const char* const base_file_name, latin_square P, const char* const P_name)
 {
 
-  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, P_name), "w");
+  FILE* f = fopen(FNAME(base_file_name, P_name, ".latin_square"), "w");
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
@@ -259,7 +470,7 @@ void save_latin_square(const char* const base_file_name, latin_square P, const c
 
 void load_latin_square(const char*const base_file_name, latin_square* P, const char* const P_name)
 {
-  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, P_name), "r");
+  FILE* f = fopen(FNAME(base_file_name, P_name, ".latin_square"), "r");
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
@@ -319,7 +530,7 @@ void read_latin_squares_arrays(FILE* f, latin_square* P, uint32_t r, latin_squar
 
 void save_latin_squares(const char*const base_file_name, latin_square* P, uint32_t r, latin_square* Q, uint32_t s, const char* const name)
 {
-  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "w");
+  FILE* f = fopen(FNAME(base_file_name, name, ".latin_square"), "w");
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
@@ -353,7 +564,7 @@ void fread_latin_squares_arrays(FILE* f, latin_square *P, uint32_t r, latin_squa
 
 void load_latin_squares(const char*const base_file_name, latin_square** P, uint32_t* r, latin_square** Q, uint32_t* s, const char*const name)
 {
-  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "r");
+  FILE* f = fopen(FNAME(base_file_name, name, ".latin_square"), "r");
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
@@ -422,7 +633,7 @@ void fwrite_all_latin_square_arrays(FILE* f, latin_square* P, latin_square* Q, u
 
 void save_all_latin_square_arrays(const char*const base_file_name, latin_square* P, latin_square* Q, uint32_t r, uint32_t s, const char*const name)
 {
-  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "w");
+  FILE* f = fopen(FNAME(base_file_name, name, ".latin_square"), "w");
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
@@ -434,81 +645,6 @@ void save_all_latin_square_arrays(const char*const base_file_name, latin_square*
   fclose(f);
 
   return;
-}
-
-#define REFRESH_RATE (100)
-/*
- * returns 1 upon early breaking
- */
-uint8_t action_on_all_latin_square_arrays(const char*const base_file_name, const char*const name, perf_counter* perf, action func, void* data)
-{
-  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "r");
-  if (f == NULL)
-  {
-    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
-    exit(1);
-  }
-
-  uint8_t ret = 0;
-  size_t count;
-  uint32_t r, s;
-  fread(&count, sizeof(count), 1, f);
-  fread(&r, sizeof(r), 1, f);
-  fread(&s, sizeof(s), 1, f);
-
-  latin_square *P = calloc(r, sizeof(latin_square));
-  latin_square *Q = calloc(s, sizeof(latin_square));
-  if (P == NULL || Q == NULL)
-  {
-    fprintf(stderr, "[OoM] Buy more RAM LOL!!\n");
-    exit(1);
-  }
-
-  for (uint32_t i = 0; i < r; ++i)
-    latin_square_init(P + i, s);
-  for (uint32_t j = 0; j < s; ++j)
-    latin_square_init(Q + j, r);
-
-  for (size_t idx = 0; idx < count; ++idx)
-  {
-    for (uint32_t i = 0; i < r; ++i)
-      fread_latin_square_array(f, P + i);
-    for (uint32_t j = 0; j < s; ++j)
-      fread_latin_square_array(f, Q + j);
-
-    if (!(*func)(P, r, Q, s, data))
-    {
-      ret = 1;
-      break;
-    }
-
-    if (idx % REFRESH_RATE == 0)
-    {
-#ifndef __NO_GUI__
-      clear();
-      printw("progress: %zu / %zu = %.2f%%\n", idx, count, ((float) idx) / count * 100.0);
-      perf->counter = idx;
-      perf->lcounter = idx;
-      print_perfw(perf, "lsquares array");
-      refresh();
-#else
-      printf("progress: %zu / %zu = %.2f%%\n", idx, count, ((float) idx) / count * 100.0);
-      perf->counter = idx;
-      perf->lcounter = idx;
-      printf_perf(perf, "lsquares array");
-#endif
-    }
-  }
-
-  for (uint32_t i = 0; i < r; ++i)
-    latin_square_clear(P + i);
-  for (uint32_t j = 0; j < s; ++j)
-    latin_square_clear(Q + j);
-
-  free(P);
-  free(Q);
-  fclose(f);
-  return ret;
 }
 
 // ------------ timings ---------------------
@@ -528,7 +664,7 @@ void fwrite_times(FILE* f, perf_counter perf)
 
 void save_times(const char* const base_file_name, perf_counter perf, const char* const name)
 {
-  FILE* f = fopen(temp_sprintf("%s%s.times", base_file_name, name), "w");
+  FILE* f = fopen(FNAME(base_file_name, name, ".times"), "w");
   if (f == NULL)
   {
     fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));

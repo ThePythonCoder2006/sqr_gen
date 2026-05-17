@@ -43,7 +43,8 @@ void pow_m_sqr_printf(pow_m_sqr M);
 // magic square generation
 int search_pow_m_sqr(pow_m_sqr base, uint64_t X, uint64_t progress, uint8_t *heat_map, perf_counter *perf);
 void pow_semi_m_sqr_from_taxicab(pow_m_sqr M, taxicab a, taxicab b, latin_square *P, latin_square *Q);
-void search_pow_m_sqr_from_pow_semi_m_sqr(pow_m_sqr M);
+void semi_to_full_naive(perf_counter* perf, pow_m_sqr M);
+void semi_to_full_simultanious_perm(perf_counter* perf, pow_m_sqr M);
 void generate_siamese(pow_m_sqr M);
 int8_t parity_of_sets(uint32_t *rel1, uint32_t *rel2, const uint64_t n);
 

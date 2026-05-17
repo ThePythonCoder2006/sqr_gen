@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
 #if (!defined __NO_GUI__) && 0
   initscr();
-  
+
   if (!has_colors())
   {
     fprintf(stderr, "[ERROR] Your terminal does not support color!\n");

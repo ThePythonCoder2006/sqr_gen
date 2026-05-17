@@ -391,14 +391,18 @@ void find_taxicab(taxicab T)
 /*
  * Find two taxicabs a (r×s) and b (s×r) whose cross-products are distinct
  * and whose expected number of diagonal squares exceeds p.
+ * and where the product of a * b <= mu
  *
  * Each taxicab gets its own HashTable so accumulated work is never shared
  * between the two searches, eliminating the cross-contamination bug while
  * preserving hash-table warmth across retries of the outer loop.
  *
+ * To not use probability condition you can set p <= 0
+ * To not use sum condition you can set mu = -1ULL = UINT64_MAX
+ *
  * Returns 1 when a valid pair is found.
  */
-int find_taxicabs_proba(taxicab a, taxicab b, double p)
+int find_taxicabs_condition(taxicab a, taxicab b, double p, uint64_t mu)
 {
   if (a.r != b.s || a.s != b.r || a.d != b.d)
   {
@@ -433,40 +437,75 @@ int find_taxicabs_proba(taxicab a, taxicab b, double p)
 
   pow_m_sqr M = {0};
   pow_m_sqr_init(&M, n, a.d);
-  double p_latin = 0;
+  double p_latin     = 0;
   double max_p_latin = 0;
+  uint64_t curr1 = 0,
+           curr2 = 0;
+  uint64_t min_mu = UINT64_MAX;
 
+  uint64_t broke_count = 0;
   uint16_t refresh_frames = 0;
   do
   {
-    ++refresh_frames;
-    (void) find_terms_ht(&ht_a, result_reps_a, terms_a, r, s);
-    (void) find_terms_ht(&ht_b, result_reps_b, terms_b, s, r);
-
-    reps_to_taxicab(a, result_reps_a);
-    reps_to_taxicab(b, result_reps_b);
-    if (!taxicab_cross_products_are_distinct(a, b)) continue;
-
-    pow_semi_m_sqr_from_taxicab(M, a, b, NULL, NULL);
-    p_latin = proba_with_latin_square(M, r, s);
-    if (p_latin > max_p_latin)
-      max_p_latin = p_latin;
-
-    if ((refresh_frames & 0x3f) == 0)
+    if ((refresh_frames & 0x3ff) == 0)
     {
 #ifndef __NO_GUI__
       clear();
       mvprintw(0, 0, "p_latin: %lf, max: %lf\n", p_latin, max_p_latin);
+      printw("%7"PRIu64" * %7"PRIu64" = %12"PRIu64" > %12"PRIu64" > %12"PRIu64"\n", curr1, curr2, curr1 * curr2, min_mu, mu);
+      printw("%"PRIu64"\n", broke_count);
       refresh();
 #else
       printf("\rp_latin: %lf, max: %lf\n", p_latin, max_p_latin);
 #endif
     }
+    ++refresh_frames;
+
+    (void) find_terms_ht(&ht_a, result_reps_a, terms_a, r, s);
+    reps_to_taxicab(a, result_reps_a);
+    curr1 = taxicab_sum_row(a, 0);
+
+    uint32_t limit = 0;
+    do {
+      ++limit;
+      if (limit > 0xffff)
+      {
+        ++broke_count;
+        break;
+      }
+      (void) find_terms_ht(&ht_b, result_reps_b, terms_b, s, r);
+      reps_to_taxicab(b, result_reps_b);
+    } while (!taxicab_cross_products_are_distinct(a, b));
+
+    curr2 = taxicab_sum_row(b, 0);
+
+    if (curr1 * curr2 < min_mu)
+      min_mu = curr1 * curr2;
+    if (curr1 * curr2 > mu)
+      continue;
+
+    pow_semi_m_sqr_from_taxicab(M, a, b, NULL, NULL);
+    p_latin = proba_with_latin_square(M, r, s);
+    if (p_latin > max_p_latin)
+      max_p_latin = p_latin;
   } while (p_latin < p);
+
+#ifndef __NO_GUI__
+  printw("sum1 = %"PRIu64", sum2 = %"PRIu64"\n", curr1, curr2);
+#else
+  printf("sum1 = %"PRIu64", sum2 = %"PRIu64"\n", curr1, curr2);
+#endif
 
   (void) taxicab_reduce(a);
   (void) taxicab_reduce(b);
-  
+#ifndef __NO_GUI__
+  printw("after reduction\n");
+  printw("sum1 = %"PRIu64", sum2 = %"PRIu64"\n", curr1, curr2);
+#else
+  printf("after reduction\n");
+  printf("sum1 = %"PRIu64", sum2 = %"PRIu64"\n", curr1, curr2);
+#endif
+
   ht_cleanup(&ht_a);
   ht_cleanup(&ht_b);
 

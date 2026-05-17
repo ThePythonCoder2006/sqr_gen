@@ -17,11 +17,11 @@ typedef struct timer_s
 
 #else
 
-#include <time.h>
+#include "nob.h"
+
 typedef struct timer_s
 {
-	double frequency;
-	double start;
+  uint64_t nanos_start;
 } timer;
 
 #endif
@@ -51,19 +51,18 @@ double timer_stop(timer *timer)
   return interval;
 }
 
-#else 
+#else
 
 void timer_start(timer *timer)
 {
-	timer->frequency = CLOCKS_PER_SEC;
-	timer->start = clock();
+	timer->nanos_start = nob_nanos_since_unspecified_epoch();
 	return;
 }
 
 double timer_stop(timer *timer)
 {
-	double stop = clock();
-	return (stop - timer->start) / timer->frequency;
+	uint64_t nanos_stop = nob_nanos_since_unspecified_epoch();
+	return ((double) (nanos_stop - timer->nanos_start)) / NOB_NANOS_PER_SEC;
 }
 
 #endif

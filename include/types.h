@@ -78,4 +78,13 @@ typedef uint8_t (*action)(latin_square*, uint32_t, latin_square*, uint32_t, void
 
 extern const uint64_t A000479[];
 
+typedef enum method_e
+{
+  METHOD_NONE,
+  METHOD_MU_SQUARED,
+  METHOD_MU,
+  METHOD_SQRT_MU,
+  METHOD_COUNT,
+} method;
+
 #endif //__TYPES__

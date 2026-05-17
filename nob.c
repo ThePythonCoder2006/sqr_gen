@@ -1,3 +1,4 @@
+#include <complex.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,6 +13,7 @@
 #define ODIR SRCDIR "obj/"
 #define IDIR "include"
 #define LDIR "libs"
+#define MDIR SRCDIR "main/"
 
 #define TRGT BINDIR "main"
 
@@ -39,53 +41,59 @@ void usage(FILE* stream)
   return;
 }
 
-int cc_flags(void)
+char* get_trgt(const char* const name, const char* const prefix, const char* const suffix, const char* const ext)
 {
-  cmd_append(&cmd, "-Wall");
-  cmd_append(&cmd, "-Wextra");
-  cmd_append(&cmd, "-pedantic");
+  char* ret = calloc(256, sizeof(char));
+  snprintf(ret, 255,"%s%s%s%s", name,
+      debug ? temp_sprintf("%sdb%s", prefix, suffix) : "",
+      no_gui ? temp_sprintf("%sno-gui%s", prefix, suffix) : "",
+      ext);
+  return ret;
+}
+
+int cc_flags(Cmd* c)
+{
+  cmd_append(c, "-Wall");
+  cmd_append(c, "-Wextra");
+  cmd_append(c, "-pedantic");
 
   if (debug)
-    cmd_append(&cmd, "-ggdb", "-O0");
+    cmd_append(c, "-ggdb", "-O0");
   else
-    cmd_append(&cmd, "-O3");
+    cmd_append(c, "-O3");
   if (no_gui)
-    cmd_append(&cmd, "-D__NO_GUI__");
+    cmd_append(c, "-D__NO_GUI__");
   if (flush_tables)
-    cmd_append(&cmd, "-D__TABLE_FLUSHING__");
+    cmd_append(c, "-D__TABLE_FLUSHING__");
 
   return 1;
 }
 
-int i_flags(void)
+int i_flags(Cmd* c)
 {
-  cmd_append(&cmd, "-pthread");
-  cmd_append(&cmd, "-I" IDIR);
-  cmd_append(&cmd, "-I.");
+  cmd_append(c, "-pthread");
+  cmd_append(c, "-I" IDIR);
+  cmd_append(c, "-I.");
 
   return 1;
 }
 
 
-int l_flags(void)
+int l_flags(Cmd* c)
 {
-  cmd_append(&cmd, "-lm");
-  cmd_append(&cmd, "-lcurses");
-  cmd_append(&cmd, "-pthread");
+  cmd_append(c, "-lm");
+  cmd_append(c, "-lcurses");
+  cmd_append(c, "-pthread");
 
   return 1;
 }
 
-bool append_h_to_deps(Nob_Walk_Entry entry);
+bool deps_append_files_in_dir(Nob_Walk_Entry entry);
 bool c_to_o(Nob_Walk_Entry entry);
 bool o_to_elf(Nob_Walk_Entry entry);
-bool run_tests(void);
-bool build_and_run_mt_tests(bool use_valgrind, bool use_tsan);
-bool build_mt_test_suite(bool use_tsan);
-bool run_mt_test(const char *test_name, const char *test_exe, bool use_valgrind, bool use_tsan);
+bool build_main(const char* const name);
 
-char odir[256];
-char trgt[256];
+char* odir;
 
 int main(int argc, char** argv)
 {
@@ -98,13 +106,10 @@ int main(int argc, char** argv)
   flag_bool_var(&flush_tables, "flush-tables", true, "enables \"experimental\" table flushing behaviour when no more rels have been found in a long time");
   flag_bool_var(&unit, "unit", false, "builds and runs unit tests");
   flag_bool_var(&tests, "test", false, "run tests");
-  bool* mt_tests = flag_bool("mt-test", false, "build and run multithreaded unit tests");
   bool* use_multithreaded = flag_bool("mt", false, "use multithreaded for latin squares search");
   size_t* threads = flag_size("threads", 0, "number of threads");
   bool* new_taxicabs = flag_bool("new-taxicabs", false, "searches for new taxicabs, with expected number of diagonals min_proba");
   double* min_proba = flag_double("min_proba", 0, "minimum expected number of diagonals");
-  bool* valgrind = flag_bool("valgrind", false, "run tests with valgrind memory checker");
-  bool* tsan = flag_bool("tsan", false, "build and run with ThreadSanitizer");
 
   if (!flag_parse(argc, argv))
   {
@@ -133,42 +138,25 @@ int main(int argc, char** argv)
     exit(0);
   }
 
-  snprintf(odir, 255, ODIR"%s%s", debug ? "db/" : "", no_gui ? "no_gui/":"");
-  snprintf(trgt, 255, TRGT"%s%s", debug ? "_db" : "", no_gui ? "_no-gui" : "");
+  odir = get_trgt(ODIR, "",  "/", "");
 
   if (!mkdir_if_not_exists(BINDIR)) return 1;
   if (!mkdir_if_not_exists(odir)) return 1;
   if (!mkdir_if_not_exists("output")) return 1;
 
   da_append(&deps, "nob.c");
-  walk_dir(IDIR, append_h_to_deps);
-
-  // Handle multithreaded tests
-  if (*mt_tests)
-  {
-    if (*tsan)
-    {
-      nob_log(INFO, "Building with ThreadSanitizer...");
-    }
-
-    if (!build_and_run_mt_tests(*valgrind, *tsan))
-    {
-      nob_log(ERROR, "Multithreaded tests failed");
-      return 1;
-    }
-    return 0;
-  }
+  walk_dir(IDIR, deps_append_files_in_dir);
 
   if (!walk_dir(SRCDIR, c_to_o)) return 1;
-  cmd_append(&cmd, "gcc");
-  if (!walk_dir(odir, o_to_elf)) return 1;
-  cmd_append(&cmd, temp_sprintf("%smain.o", odir));
-  cmd_append(&cmd, "-o", trgt);
-  cc_flags();
-  l_flags();
-  cmd_append(&cmd, "-lgmp");
 
-  if (!cmd_run(&cmd)) return 1;
+  /*
+   * Now the c files have been converted to o and all subsequent build depend on them:
+   *   add all c files to deps
+   */
+  if (!walk_dir(SRCDIR, deps_append_files_in_dir)) return 1;
+
+  if (!build_main("main")) return 1;
+  if (!build_main("viewer")) return 1;
 
   if (unit)
   {
@@ -176,8 +164,10 @@ int main(int argc, char** argv)
     cmd_append(&cmd, "src/unit/test.c");
     if (!walk_dir(odir, o_to_elf)) return 1;
     cmd_append(&cmd, "-o", BINDIR"unit_test");
-    cc_flags();
-    l_flags();
+    cc_flags(&cmd);
+    i_flags(&cmd);
+    l_flags(&cmd);
+    cmd_append(&cmd, "-lgmp");
 
     if(!cmd_run(&cmd)) return 1;
 
@@ -188,18 +178,12 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  if (tests)
-  {
-    if (!run_tests()) return 1;
-    return 0;
-  }
-
   if (!run) return 0;
 
   if (debug)
     cmd_append(&cmd, "gdb");
+  cmd_append(&cmd, /* */"");
 
-  cmd_append(&cmd, trgt);
   if (count > 0)
     cmd_append(&cmd, temp_sprintf("%"PRId64, count));
   if (*new_taxicabs)
@@ -211,7 +195,7 @@ int main(int argc, char** argv)
   return 0;
 }
 
-bool append_h_to_deps(Nob_Walk_Entry entry)
+bool deps_append_files_in_dir(Nob_Walk_Entry entry)
 {
   if (entry.type == NOB_FILE_DIRECTORY)
   {
@@ -262,8 +246,8 @@ bool c_to_o(Nob_Walk_Entry entry)
 
   cmd_append(&cmd, "-o", buff);
 
-  (void) cc_flags();
-  (void) i_flags();
+  (void) cc_flags(&cmd);
+  (void) i_flags(&cmd);
 
   if (!cmd_run(&cmd)) return false;
 
@@ -285,350 +269,49 @@ bool o_to_elf(Nob_Walk_Entry entry)
   return true;
 }
 
-bool run_tests()
+bool build_main(const char* const name)
 {
-  const char *test_exe = BINDIR "test_permut";
-
-  // List of source files to compile
-  const char *sources[] = {
-    SRCDIR "permut.c",
-    SRCDIR "pow_m_sqr.c",
-    SRCDIR "taxicab.c",
-    SRCDIR "latin_squares.c",
-    SRCDIR "arithmetic.c",
-    SRCDIR "print_grid.c",
-    SRCDIR "unit/test_permut.c"
-  };
-
-  if (!mkdir_if_not_exists(temp_sprintf("%sunit", odir))) return false;
-
-  const char* objects[] = {
-    temp_sprintf("%spermut.o", odir),
-    temp_sprintf("%spow_m_sqr.o", odir),
-    temp_sprintf("%staxicab.o", odir),
-    temp_sprintf("%slatin_squares.o", odir),
-    temp_sprintf("%sarithmetic.o", odir),
-    temp_sprintf("%sprint_grid.o", odir),
-    temp_sprintf("%sunit/test_permut.o", odir)
-  };
-
-  size_t num_sources = sizeof(sources) / sizeof(sources[0]);
-
-  // Compile each source file
-  for (size_t i = 0; i < num_sources; ++i)
+  da_append(&deps, temp_sprintf(MDIR"%s.c", name));
+  if (needs_rebuild(get_trgt(temp_sprintf(MDIR"%s", name),
+                   "-", "", ".o"), deps.items, deps.count))
   {
-    // Check if recompilation is needed
-    bool rebuild = nob_needs_rebuild(objects[i], sources, num_sources);
-    rebuild |= needs_rebuild(objects[i], deps.items, deps.count);
-
-    if (rebuild)
-    {
-      nob_log(INFO, "Compiling %s", sources[i]);
-
-      cmd_append(&cmd, "gcc");
-      cmd_append(&cmd, sources[i]);
-      cmd_append(&cmd, "-c");
-
-      cmd_append(&cmd, "-o", objects[i]);
-
-      cc_flags();
-      l_flags();
-
-      if (!cmd_run(&cmd)) return false;
-    }
-    else
-      nob_log(INFO, "Up to date: %s", objects[i]);
-  }
-
-  // Link all objects into the test executable
-  bool needs_link = nob_needs_rebuild(test_exe, objects, sizeof(objects) / sizeof(objects[0]));
-
-  if (needs_link) {
-    nob_log(INFO, "Linking %s", test_exe);
-
+    // main -> .o
     cmd_append(&cmd, "gcc");
-
-    if (!cc_flags()) return 0;
-
-    cmd_append(&cmd, "-o", test_exe);
-
-    for (size_t i = 0; i < num_sources; ++i)
-      cmd_append(&cmd, objects[i]);
-
-    if (!l_flags()) return 0;
-
+    cmd_append(&cmd, temp_sprintf(MDIR"%s.c", name));
+    cmd_append(&cmd, "-c");
+    cmd_append(&cmd, "-o",
+        get_trgt(temp_sprintf(MDIR"%s", name),
+                     "-", "", ".o"));
+    cc_flags(&cmd);
+    i_flags(&cmd);
     if (!cmd_run(&cmd)) return false;
   }
-  else
-    nob_log(INFO, "Up to date: %s", test_exe);
 
-  // Run tests if requested
-  if (run) {
-      nob_log(INFO, "Running tests...");
-      Cmd cmd = {0};
-      cmd_append(&cmd, test_exe);
-      if (!cmd_run(&cmd))
-      {
-          nob_log(ERROR, "Tests failed");
-          return false;
-      }
+  if (needs_rebuild(get_trgt(temp_sprintf(BINDIR"%s", name),
+                   "-", "", ""  ), deps.items, deps.count))
+  {
+    // .os -> elf
+    cmd_append(&cmd, "gcc");
+    if (!walk_dir(odir, o_to_elf)) return false;
+    cmd_append(&cmd,
+        get_trgt(temp_sprintf(MDIR"%s", name),
+                     "-", "", ".o"));
+    cmd_append(&cmd, "-o",
+        get_trgt(temp_sprintf(BINDIR"%s", name),
+                     "-", "", ""  ));
+    cc_flags(&cmd);
+    l_flags(&cmd);
+    cmd_append(&cmd, "-lgmp");
+
+    if (!cmd_run(&cmd)) return false;
+    nob_log(INFO, "%s build successfully", name);
   }
   else
-  {
-      nob_log(INFO, "Build complete. Run with: %s", test_exe);
-      nob_log(INFO, "Or rebuild and run with: ./nob -test -run");
-  }
+    nob_log(INFO, "Nothing to be done for %s", name);
+
+  da_remove_unordered(&deps, deps.count - 1);
 
   return true;
-}
-
-bool build_and_run_mt_tests(bool use_valgrind, bool use_tsan)
-{
-  nob_log(INFO, "========================================");
-  nob_log(INFO, "Building Multithreaded Test Suite");
-  nob_log(INFO, "========================================");
-
-  if (!build_mt_test_suite(use_tsan))
-  {
-    nob_log(ERROR, "Failed to build MT test suite");
-    return false;
-  }
-
-  nob_log(INFO, "");
-  nob_log(INFO, "========================================");
-  nob_log(INFO, "Running Multithreaded Tests");
-  nob_log(INFO, "========================================");
-
-  bool all_passed = true;
-
-  // Run test_latin_squares_mt
-  if (!run_mt_test("Latin Squares MT", BINDIR "test_latin_squares_mt", use_valgrind, use_tsan))
-  {
-    all_passed = false;
-  }
-
-  nob_log(INFO, "");
-
-  // Run test_taxicab_method_mt
-  if (!run_mt_test("Taxicab Method MT", BINDIR "test_taxicab_method_mt", use_valgrind, use_tsan))
-  {
-    all_passed = false;
-  }
-
-  nob_log(INFO, "");
-  nob_log(INFO, "========================================");
-  if (all_passed)
-  {
-    nob_log(INFO, "ALL TESTS PASSED!");
-  }
-  else
-  {
-    nob_log(ERROR, "SOME TESTS FAILED");
-  }
-  nob_log(INFO, "========================================");
-
-  return all_passed;
-}
-
-bool build_mt_test_suite(bool use_tsan)
-{
-  if (!mkdir_if_not_exists(temp_sprintf("%smt_tests", odir))) return false;
-
-  // Define source files needed for MT tests
-  typedef struct {
-    const char *name;
-    const char **sources;
-    size_t num_sources;
-    const char *output;
-  } TestTarget;
-
-  // Sources for test_latin_squares_mt
-  static const char *latin_sources[] = {
-    SRCDIR "find_latin_squares_mt.c",
-    SRCDIR "find_latin_square.c",
-    SRCDIR "latin_squares.c",
-    SRCDIR "pow_m_sqr.c",
-    SRCDIR "arithmetic.c",
-    SRCDIR "taxicab.c",
-    SRCDIR "permut.c",
-    SRCDIR "print_grid.c",
-    SRCDIR "test/test_latin_squares_mt.c"
-  };
-
-  // Sources for test_taxicab_method_mt
-  static const char *taxicab_sources[] = {
-    SRCDIR "taxicab_method_mt.c",
-    SRCDIR "taxicab_method.c",
-    SRCDIR "taxicab_method_common.c",
-    SRCDIR "find_latin_squares_mt.c",
-    SRCDIR "find_latin_square.c",
-    SRCDIR "find_sets.c",
-    SRCDIR "latin_squares.c",
-    SRCDIR "pow_m_sqr.c",
-    SRCDIR "arithmetic.c",
-    SRCDIR "serialize.c",
-    SRCDIR "taxicab.c",
-    SRCDIR "permut.c",
-    SRCDIR "print_grid.c",
-    SRCDIR "test/test_taxicab_method_mt.c"
-  };
-
-  TestTarget targets[] = {
-    {
-      .name = "test_latin_squares_mt",
-      .sources = latin_sources,
-      .num_sources = sizeof(latin_sources) / sizeof(latin_sources[0]),
-      .output = BINDIR "test_latin_squares_mt"
-    },
-    {
-      .name = "test_taxicab_method_mt",
-      .sources = taxicab_sources,
-      .num_sources = sizeof(taxicab_sources) / sizeof(taxicab_sources[0]),
-      .output = BINDIR "test_taxicab_method_mt"
-    }
-  };
-
-  size_t num_targets = sizeof(targets) / sizeof(targets[0]);
-
-  for (size_t t = 0; t < num_targets; ++t)
-  {
-    TestTarget *target = &targets[t];
-    nob_log(INFO, "Building %s...", target->name);
-
-    // Compile each source file
-    const char *objects[32]; // Assuming max 32 sources
-    for (size_t i = 0; i < target->num_sources; ++i)
-    {
-      // Generate object file path
-      const char *src = target->sources[i];
-
-      // Extract filename without extension
-      const char *filename = src;
-      const char *last_slash = strrchr(src, '/');
-      if (last_slash) filename = last_slash + 1;
-
-      char obj_name[256];
-      snprintf(obj_name, sizeof(obj_name), "%smt_tests/%s", odir, filename);
-
-      // Replace .c with .o
-      char *dot = strrchr(obj_name, '.');
-      if (dot) strcpy(dot, ".o");
-
-      objects[i] = strdup(obj_name);
-
-      // Check if recompilation is needed
-      const char *dep_sources[] = {src};
-      bool rebuild = nob_needs_rebuild(objects[i], dep_sources, 1);
-      rebuild |= needs_rebuild(objects[i], deps.items, deps.count);
-
-      if (rebuild)
-      {
-        nob_log(INFO, "  Compiling %s", src);
-
-        Cmd compile_cmd = {0};
-        cmd_append(&compile_cmd, "gcc");
-        cmd_append(&compile_cmd, src);
-        cmd_append(&compile_cmd, "-c");
-        cmd_append(&compile_cmd, "-o", objects[i]);
-
-        // Add flags
-        cmd_append(&compile_cmd, "-Wall", "-Wextra", "-pedantic");
-        cmd_append(&compile_cmd, "-pthread");
-        cmd_append(&compile_cmd, "-I" IDIR, "-I.");
-
-        if (use_tsan)
-          cmd_append(&compile_cmd, "-fsanitize=thread");
-
-        if (debug)
-          cmd_append(&compile_cmd, "-ggdb", "-O0");
-        else
-          cmd_append(&compile_cmd, "-O2");
-
-        if (no_gui)
-          cmd_append(&compile_cmd, "-D__NO_GUI__");
-
-        if (!cmd_run(&compile_cmd))
-        {
-          nob_log(ERROR, "Failed to compile %s", src);
-          return false;
-        }
-      }
-      else
-        nob_log(INFO, "  Up to date: %s", objects[i]);
-    }
-
-    // Link the test executable
-    bool needs_link = nob_needs_rebuild(target->output, objects, target->num_sources);
-
-    if (needs_link)
-    {
-      nob_log(INFO, "  Linking %s", target->output);
-
-      Cmd link_cmd = {0};
-      cmd_append(&link_cmd, "gcc");
-
-      if (use_tsan)
-        cmd_append(&link_cmd, "-fsanitize=thread");
-
-      cmd_append(&link_cmd, "-o", target->output);
-
-      for (size_t i = 0; i < target->num_sources; ++i)
-        cmd_append(&link_cmd, objects[i]);
-
-      cmd_append(&link_cmd, "-pthread");
-      cmd_append(&link_cmd, "-lm", "-lgmp");
-
-      if (!no_gui)
-        cmd_append(&link_cmd, "-lcurses");
-      else
-        cmd_append(&link_cmd, "-D__NO_GUI__");
-
-      if (!cmd_run(&link_cmd))
-      {
-        nob_log(ERROR, "Failed to link %s", target->output);
-        return false;
-      }
-    }
-    else
-      nob_log(INFO, "  Up to date: %s", target->output);
-
-    // Free dynamically allocated object paths
-    for (size_t i = 0; i < target->num_sources; ++i)
-      free((void*)objects[i]);
-  }
-
-  return true;
-}
-
-bool run_mt_test(const char *test_name, const char *test_exe, bool use_valgrind, bool use_tsan)
-{
-  nob_log(INFO, "Running %s...", test_name);
-
-  Cmd test_cmd = {0};
-
-  if (use_valgrind && !use_tsan)
-  {
-    nob_log(INFO, "  With Valgrind memory checking");
-    cmd_append(&test_cmd, "valgrind");
-    cmd_append(&test_cmd, "--leak-check=full");
-    cmd_append(&test_cmd, "--error-exitcode=1");
-    cmd_append(&test_cmd, "--quiet");
-  }
-
-  cmd_append(&test_cmd, test_exe);
-
-  bool result = cmd_run(&test_cmd);
-
-  if (result)
-  {
-    nob_log(INFO, "  PASSED: %s", test_name);
-  }
-  else
-  {
-    nob_log(ERROR, "  FAILED: %s", test_name);
-  }
-
-  return result;
 }
 
 #define NOB_IMPLEMENTATION

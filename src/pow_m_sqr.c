@@ -1,3 +1,4 @@
+#include "types.h"
 #define NOB_STRIP_PREFIX
 #include "nob.h"
 #undef ERROR
@@ -631,30 +632,90 @@ void shuffle_lines_and_cols_with_same_perm(pow_m_sqr M)
   return;
 }
 
+#define REFRESH_RATE (0xfffff)
+
 /*
  * `M` is expected to contain a semi-magic square of powers
+ * Is only likely to work if (n!)^2/( (n/2)! * 2^(n/2 + 1) ) > mu
  */
-void search_pow_m_sqr_from_pow_semi_m_sqr(pow_m_sqr M)
+void semi_to_full_naive(perf_counter* perf, pow_m_sqr M)
+{
+  uint64_t mu = pow_m_sqr_sum_row(M, 0);
+  uint64_t curr1, curr2;
+  curr1 = pow_m_sqr_sum_diag1(M);
+  curr2 = pow_m_sqr_sum_diag2(M);
+  while (curr1 != mu || curr2 != mu)
+  {
+    shuffle_lines(M);
+    curr1 = pow_m_sqr_sum_diag1(M);
+    shuffle_cols(M);
+    curr2 = pow_m_sqr_sum_diag2(M);
+    perf_counter_tick(perf);
+    if ((perf->counter & REFRESH_RATE) == 0)
+    {
+#ifndef __NO_GUI__
+      clear();
+      move(0, 0);
+      printw("O(mu^2) method progress summary:\n");
+      printw("%"PRIu64" / %"PRIu64" = %.2f%%: %"PRIu64" != %"PRIu64" != %"PRIu64"\n", perf->counter, mu * mu, (double) 100.0 * perf->counter / (mu * mu), curr1, mu, curr2);
+      print_perfw(perf, "perms");
+      refresh();
+#else
+      printf("%"PRIu64": %"PRIu64" != %"PRIu64" != %"PRIu64"\n", perf->counter, curr1, mu, curr2);
+#endif
+    }
+  }
+
+  return;
+}
+
+/*
+ * `M` is expected to contain a semi-magic square of powers
+ * Is only likely to work if n!/( (n/2)! * 2^(n/2) ) > mu
+ */
+void semi_to_full_simultanious_perm(perf_counter* perf, pow_m_sqr M)
 {
   uint64_t mu = pow_m_sqr_sum_row(M, 0);
 
-  uint64_t count = 0;
   uint64_t curr;
   while ((curr = pow_m_sqr_sum_diag1(M)) != mu)
   {
     shuffle_lines(M);
-    ++count;
-    if ((count & 0xffff) == 0)
-      printf("1: %"PRIu64", %"PRIu64" != %"PRIu64"\n", count, curr, mu);
+    perf_counter_tick(perf);
+    if ((perf->counter & REFRESH_RATE) == 0)
+    {
+#ifndef __NO_GUI__
+      clear();
+      move(0, 0);
+      printw("O(mu) method progress summary: (step 1)\n");
+      printw("%"PRIu64" / %"PRIu64" = %2.2f%%: %"PRIu64" != %"PRIu64"\n", perf->counter, 2 * mu, (double) 100 * perf->counter / (2 * mu), curr, mu);
+      print_perfw(perf, "perms");
+      refresh();
+#else
+      printf("2: %"PRIu64" / %"PRIu64" = %2.2f%%: %"PRIu64" != %"PRIu64"\n", perf->counter, 2 * mu, (double) 100 * perf->counter / (2 * mu), curr, mu);
+#endif
+    }
   }
 
-  uint64_t count2 = 0;
+  size_t counter1 = perf->counter;
+
   while ((curr = pow_m_sqr_sum_diag2(M)) != mu)
   {
     shuffle_lines_and_cols_with_same_perm(M);
-    ++count2;
-    if ((count2 & 0xffff) == 0)
-      printf("2: %"PRIu64", %"PRIu64" != %"PRIu64"\n", count2, curr, mu);
+    perf_counter_tick(perf);
+    if ((perf->counter & REFRESH_RATE) == 0)
+    {
+#ifndef __NO_GUI__
+      clear();
+      move(0, 0);
+      printw("O(mu) method progress summary: (step 2)\n");
+      printw("%"PRIu64" / %"PRIu64" = %2.2f%%: %"PRIu64" != %"PRIu64"\n", 100 * perf->counter - counter1, 2 * mu, (double) 100.0 * (perf->counter - counter1) / (2 * mu), curr, mu);
+      print_perfw(perf, "perms");
+      refresh();
+#else
+      printf("2: %"PRIu64" / %"PRIu64" = %2.2f%%: %"PRIu64" != %"PRIu64"\n", perf->counter - counter1, 2 * mu, (double) (perf->counter - counter1) / (2 * mu), curr, mu);
+#endif
+    }
   }
 
   return;

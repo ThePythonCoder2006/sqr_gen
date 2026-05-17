@@ -578,7 +578,7 @@ uint8_t is_in_hshtbl(hshtbl h, rel_item *items, uint32_t n)
 
 enum SET_SEARCH_RETVALS
 {
-  SIGSTOP = -1,
+  STOP = -1,
   NOT_FOUND,
   GUESS_FOUND,
   COLLISION_FOUND,
@@ -641,7 +641,7 @@ int8_t check_if_set_can_be_formed_from_collision(state *pack, const uint64_t sum
       perf_counter_tick(perf);
       if (!(*f)(pack->selected, n, data))
       {
-        retval = SIGSTOP;
+        retval = STOP;
         goto ret;
       }
       hshtbl_insert(&pack->found, pack->items2, pack->selected, n, set_items_sqared_sum(pack->items2, n), n);
@@ -765,7 +765,7 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
       // we found something: update retval
       retval = ret;
     if (ret < 0)
-      return SIGSTOP;
+      return STOP;
 
     /*
      * if we reached down there, count must have gone up by one from the line:
@@ -790,7 +790,7 @@ int8_t generate_random_set_with_magic_sum(state *pack, const pow_m_sqr M, const 
       hshtbl_insert(&pack->found, pack->items, pack->selected, n, set_items_sqared_sum(pack->items, n), n);
       perf_counter_tick(perf);
       if (!(*f)(pack->selected, n, data))
-        return SIGSTOP;
+        return STOP;
     }
     return GUESS_FOUND;
   }
@@ -875,8 +875,6 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
 #else
       putchar('\r');
       printf("tot: %"PRIu64"/ %"PRIu64": %.2f%%", tables_tot_count, tables_tot_capa, 100.0 * (double) tables_tot_count / (double) tables_tot_capa);
-
-      printw("tries, found: %7"PRIu64", %zu/%zu", tries, perf->counter, requiered_sets);
 #endif
     }
     ++refresh_frames;

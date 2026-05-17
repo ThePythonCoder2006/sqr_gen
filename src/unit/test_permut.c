@@ -59,7 +59,7 @@ TEST(rels_are_disjoint_simple_case) {
     rel_item arr1[] = {0, 1, 2, 3};
     rel_item arr2[] = {4, 1, 3, 0};
     uint8_t result = rels_are_disjoint(arr1, arr2, 4);
-    ASSERT_FALSE(result); 
+    ASSERT_FALSE(result);
 }
 
 TEST(rels_are_disjoint_truly_disjoint) {

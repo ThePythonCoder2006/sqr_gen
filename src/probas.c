@@ -175,3 +175,44 @@ double proba_with_latin_square(pow_m_sqr M, const uint32_t r, const uint32_t s)
   return proba_without_latin_square(M) * number_of_latin_squares(r, s);
 }
 
+method choose_method(size_t n, size_t mu)
+{
+  mpz_t perm;
+  mpz_init(perm);
+  n_perm(perm, n);
+  uint64_t n_perm_val = mpz_get_ui(perm);
+  mpz_clear(perm);
+
+  mpz_t rop;
+  mpz_init(rop);
+  mpz_fac_ui(rop, n);
+  mpz_t tmp;
+  mpz_init(tmp);
+  mpz_fac_ui(tmp, n / 2);
+  mpz_div(rop, rop, tmp);
+  mpz_clear(tmp);
+  mpz_div_2exp(rop, rop, n / 2);
+  uint64_t simultanious_perm = mpz_get_ui(rop);
+  mpz_clear(rop);
+
+  mpz_init(rop);
+  mpz_fac_ui(rop, n / 2);
+  mpz_mul(rop, rop, rop);
+  mpz_init(tmp);
+  mpz_fac_ui(tmp, n / 4);
+  mpz_mul(tmp, tmp, tmp);
+  mpz_div(rop, rop, tmp);
+  mpz_clear(tmp);
+  mpz_div_2exp(rop, rop, n / 2);
+  uint64_t disjunction_perm = mpz_get_ui(rop);
+  mpz_clear(rop);
+
+  if (disjunction_perm > mu)
+    return METHOD_SQRT_MU;
+  else if (simultanious_perm > mu)
+    return METHOD_MU;
+  else if (n_perm_val > mu)
+    return METHOD_MU_SQUARED;
+
+  return METHOD_NONE;
+}

@@ -371,7 +371,10 @@ void mvhighlighted_square_printw(int y0, int x0, highlighted_square M, int BG_CO
   return;
 }
 
-void mvtaxicab_print(int y0, int x0, taxicab T)
+/*
+ * returns x
+ */
+int mvtaxicab_print(int y0, int x0, taxicab T)
 {
   size_t *max = calloc(T.s, sizeof(size_t));
   if (max == NULL)
@@ -449,14 +452,14 @@ void mvtaxicab_print(int y0, int x0, taxicab T)
     }
 
     y += 1;
-    x = x0;
+    if (i < T.r - 1) x = x0;
   }
 
   move(y + 1, x0);
 
   free(max);
 
-  return;
+  return x;
 }
 
 #endif

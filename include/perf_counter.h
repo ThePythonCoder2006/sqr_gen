@@ -15,23 +15,17 @@ typedef struct
 
 void print_perfw(perf_counter* perf, const char *const name);
 void printf_perf(perf_counter* perf, const char *const name);
-void perf_counter_init(perf_counter* perf, const double lspeed_windows);
-void perf_counter_clear(perf_counter* perf);
-void perf_counter_tick(perf_counter *perf);
+void perf_counter_init  (perf_counter* perf, const double lspeed_windows);
+void perf_counter_clear (perf_counter* perf);
+void perf_counter_tick  (perf_counter *perf);
+void perf_counter_update(perf_counter* perf);
 
 #endif // __PERF_COUNTER__
 
 #ifdef __PERF_COUNTER_IMPLEMENTATION__
 
-#include <ncurses.h>
-
-#ifndef __NO_GUI__
-
-void print_perfw(perf_counter *perf, const char *const name)
+void perf_counter_update(perf_counter* perf)
 {
-  char coeffs[] = {' ', 'k', 'M', 'G', 'T', 'P'};
-  size_t len = (sizeof(coeffs)) / sizeof(coeffs[0]);
-
   double time = timer_stop(&(perf->time));
   perf->speed = perf->counter / time;
 
@@ -40,14 +34,29 @@ void print_perfw(perf_counter *perf, const char *const name)
 
   if (time - perf->lspeed_time >= perf->lspeed_window)
   {
-    perf->lspeed_time = time;
-    perf->lcounter = 0;
+    perf->lspeed = perf->lcounter / (time - perf->lspeed_time);
 
-    perf->lspeed = perf->counter / time;
+    perf->lcounter = 0;
+    perf->lspeed_time = time;
 
     if (perf->lspeed > perf->peak_lspeed)
       perf->peak_lspeed = perf->lspeed;
   }
+
+  return;
+}
+
+#ifndef __NO_GUI__
+
+#include <ncurses.h>
+
+void print_perfw(perf_counter *perf, const char *const name)
+{
+  char coeffs[] = {' ', 'k', 'M', 'G', 'T', 'P'};
+  size_t len = (sizeof(coeffs)) / sizeof(coeffs[0]);
+
+  perf_counter_update(perf);
+  double time = timer_stop(&(perf->time));
 
   uint8_t k = 0;
   for (; k < len; ++k)
@@ -85,21 +94,6 @@ void printf_perf(perf_counter* perf, const char *const name)
   const size_t len = (sizeof(coeffs)) / sizeof(coeffs[0]);
 
   double time = timer_stop(&(perf->time));
-  perf->speed = perf->counter / time;
-
-  if (perf->speed > perf->peak_speed)
-    perf->peak_speed = perf->speed;
-
-  if (time - perf->lspeed_time >= perf->lspeed_window)
-  {
-    perf->lspeed_time = time;
-    perf->lcounter = 0;
-
-    perf->lspeed = perf->counter / time;
-
-    if (perf->lspeed > perf->peak_lspeed)
-      perf->peak_lspeed = perf->lspeed;
-  }
 
   uint8_t k = 0;
   for (; k < len; ++k)
@@ -146,7 +140,7 @@ void perf_counter_init(perf_counter* perf, const double lspeed_window)
 
 void perf_counter_clear(perf_counter* perf)
 {
-  UNUSED(perf);
+  (void) perf;
   return;
 }
 

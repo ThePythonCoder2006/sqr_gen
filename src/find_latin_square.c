@@ -1,10 +1,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
+
+#include <ncurses.h>
+#include "nob.h"
 
 #include "find_latin_squares.h"
-#include "latin_squares.h"
 #include "pow_m_sqr.h"
+#include "serialize.h"
 
 typedef struct
 {
@@ -151,35 +155,76 @@ void free_arrays(state *s)
   free(s->usedInCol);
 }
 
-#if 0
-int main()
+/*
+ * returns 1 upon early breaking
+ */
+uint8_t action_on_all_latin_square_arrays(const char*const base_file_name, const char*const name, perf_counter* perf, action func, void* data)
 {
-  printf("Enter size of Latin square (n): ");
-  int size;
-  scanf("%d", &size);
-  if (size < 1 || size > 12)
+  FILE* f = fopen(temp_sprintf("%s%s.latin_square", base_file_name, name), "r");
+  if (f == NULL)
   {
-    printf("Please use a reasonable size (1-12)\n");
-    return 1;
+    fprintf(stderr, "[ERROR] Could not read file: %s\n", strerror(errno));
+    exit(1);
   }
 
-  init_arrays(size);
-  latin_square P = {0};
-  latin_square_init(&P, size);
+  uint8_t ret = 0;
+  size_t count;
+  uint32_t r, s;
+  fread(&count, sizeof(count), 1, f);
+  fread(&r,     sizeof(r),     1, f);
+  fread(&s,     sizeof(s),     1, f);
 
-  // Fix first row: {1, 2, ..., n}
-  for (uint64_t col = 0; col < P.n; col++)
+  latin_square *P = calloc(r, sizeof(latin_square));
+  latin_square *Q = calloc(s, sizeof(latin_square));
+  if (P == NULL || Q == NULL)
   {
-    M_SQR_GET_AS_MAT(P, 0, col) = col + 1;
-    usedInRow[0][col + 1] = true;
-    usedInCol[col][col + 1] = true;
+    fprintf(stderr, "[OoM] Buy more RAM LOL!!\n");
+    exit(1);
   }
 
-  fillCell(P, 1, 0, print_latin_square); // Start from second row, first column
+  for (uint32_t i = 0; i < r; ++i)
+    latin_square_init(P + i, s);
+  for (uint32_t j = 0; j < s; ++j)
+    latin_square_init(Q + j, r);
 
-  latin_square_clear(&P);
-  free_arrays(P.n);
-  return 0;
-}
+  for (size_t idx = 0; idx < count; ++idx)
+  {
+    for (uint32_t i = 0; i < r; ++i)
+      fread_latin_square_array(f, P + i);
+    for (uint32_t j = 0; j < s; ++j)
+      fread_latin_square_array(f, Q + j);
 
+    if (!(*func)(P, r, Q, s, data))
+    {
+      ret = 1;
+      break;
+    }
+
+    if (idx % REFRESH_RATE == 0)
+    {
+#ifndef __NO_GUI__
+      clear();
+      printw("progress: %zu / %zu = %.2f%%\n", idx, count, ((float) idx) / count * 100.0);
+      perf->counter = idx;
+      perf->lcounter = idx;
+      print_perfw(perf, "lsquares array");
+      refresh();
+#else
+      printf("progress: %zu / %zu = %.2f%%\n", idx, count, ((float) idx) / count * 100.0);
+      perf->counter = idx;
+      perf->lcounter = idx;
+      printf_perf(perf, "lsquares array");
 #endif
+    }
+  }
+
+  for (uint32_t i = 0; i < r; ++i)
+    latin_square_clear(P + i);
+  for (uint32_t j = 0; j < s; ++j)
+    latin_square_clear(Q + j);
+
+  free(P);
+  free(Q);
+  fclose(f);
+  return ret;
+}
