@@ -29,7 +29,7 @@ bool run = false;
 
 void usage(FILE* stream)
 {
-  fprintf(stream, "Usage: ./nob [OPTIONS] [TYPE] [COUNT]\n");
+  fprintf(stream, "Usage: %s [OPTIONS] [TYPE] [COUNT]\n", flag_program_name());
   fprintf(stream, "OPTIONS:\n");
   flag_print_options(stream);
   fprintf(stream, "TYPE:\n"
@@ -99,6 +99,8 @@ int main(int argc, char** argv)
 {
   NOB_GO_REBUILD_URSELF(argc, argv);
 
+  nob_set_log_handler(nob_cancer_log_handler);
+
   bool* help = flag_bool("help", false, "show this help on stdout");
   flag_bool_var(&debug, "debug", false, "enables debug build");
   flag_bool_var(&no_gui, "no-gui", false, "disables the curses based GUI");
@@ -140,9 +142,10 @@ int main(int argc, char** argv)
 
   odir = get_trgt(ODIR, "",  "/", "");
 
-  if (!mkdir_if_not_exists(BINDIR)) return 1;
-  if (!mkdir_if_not_exists(odir)) return 1;
-  if (!mkdir_if_not_exists("output")) return 1;
+  if (!mkdir_if_not_exists(BINDIR     )) return 1;
+  if (!mkdir_if_not_exists(odir       )) return 1;
+  if (!mkdir_if_not_exists("output"   )) return 1;
+  if (!mkdir_if_not_exists(MDIR"obj/" )) return 1;
 
   da_append(&deps, "nob.c");
   walk_dir(IDIR, deps_append_files_in_dir);
@@ -272,7 +275,7 @@ bool o_to_elf(Nob_Walk_Entry entry)
 bool build_main(const char* const name)
 {
   da_append(&deps, temp_sprintf(MDIR"%s.c", name));
-  if (needs_rebuild(get_trgt(temp_sprintf(MDIR"%s", name),
+  if (needs_rebuild(get_trgt(temp_sprintf(MDIR"obj/%s", name),
                    "-", "", ".o"), deps.items, deps.count))
   {
     // main -> .o
@@ -280,7 +283,7 @@ bool build_main(const char* const name)
     cmd_append(&cmd, temp_sprintf(MDIR"%s.c", name));
     cmd_append(&cmd, "-c");
     cmd_append(&cmd, "-o",
-        get_trgt(temp_sprintf(MDIR"%s", name),
+        get_trgt(temp_sprintf(MDIR"obj/%s", name),
                      "-", "", ".o"));
     cc_flags(&cmd);
     i_flags(&cmd);
@@ -294,7 +297,7 @@ bool build_main(const char* const name)
     cmd_append(&cmd, "gcc");
     if (!walk_dir(odir, o_to_elf)) return false;
     cmd_append(&cmd,
-        get_trgt(temp_sprintf(MDIR"%s", name),
+        get_trgt(temp_sprintf(MDIR"obj/%s", name),
                      "-", "", ".o"));
     cmd_append(&cmd, "-o",
         get_trgt(temp_sprintf(BINDIR"%s", name),

@@ -1929,13 +1929,13 @@ NOBDEF void nob_cancer_log_handler(Nob_Log_Level level, const char *fmt, va_list
 {
     switch (level) {
     case NOB_INFO:
-        fprintf(stderr, "ℹ️ \x1b[36m[INFO]\x1b[0m ");
+        fprintf(stderr, "\x1b[36m[INFO]\x1b[0m ");
         break;
     case NOB_WARNING:
-        fprintf(stderr, "⚠️ \x1b[33m[WARNING]\x1b[0m ");
+        fprintf(stderr, "\x1b[33m[WARNING]\x1b[0m ");
         break;
     case NOB_ERROR:
-        fprintf(stderr, "🚨 \x1b[31m[ERROR]\x1b[0m ");
+        fprintf(stderr, "\x1b[31m[ERROR]\x1b[0m ");
         break;
     case NOB_NO_LOGS: return;
     default:
