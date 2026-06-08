@@ -20,16 +20,23 @@ typedef enum file_type_e
   FILE_TYPE_COUNT,
 } file_type;
 
-void usage(void);
+void usage(FILE* stream);
 
 int main(int argc, char** argv)
 {
   file_type type = FILE_POW_M_SQR;
+  bool* help = flag_bool("help", false, "print this help on stdout");
   char** file_pow_m_sqr = flag_str("sqr", "sq", "to display a square of powers. takes M_name as value");
   Flag_List* file_taxicabs = flag_list("taxi", "to display 2 taxicabs. Write the files names as -taxi=a_name -taxi=b_name, and pass the base_file_name as path");
   char** latex_outfile = flag_str("l", "", "set to non-null to write the read matrix to a latex file of your chosing");
 
   flag_parse(argc, argv);
+
+  if (*help)
+  {
+    usage(stdout);
+    return 0;
+  }
 
   argc = flag_rest_argc();
   argv = flag_rest_argv();
@@ -37,7 +44,7 @@ int main(int argc, char** argv)
   if (argc <= 0)
   {
     fprintf(stderr, "No file provided\n");
-    usage();
+    usage(stdout);
     return 1;
   }
 
@@ -113,7 +120,7 @@ int main(int argc, char** argv)
       if (file_taxicabs->count < 2)
       {
         fprintf(stderr, "[ERROR] Not enough arguments for -taxi\n");
-        usage();
+        usage(stdout);
         exit(1);
       }
       if (file_taxicabs->count > 2)
@@ -200,8 +207,11 @@ int main(int argc, char** argv)
   return 0;
 }
 
-void usage(void)
+void usage(FILE* stream)
 {
+  fprintf(stream, "USAGE:\n %s [OPTIONS] [PATH]\n", flag_program_name());
+  fprintf(stream, "Options:\n");
+  flag_print_options(stream);
   return;
 }
 

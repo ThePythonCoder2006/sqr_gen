@@ -117,11 +117,14 @@ void show_starting_stats_on_square(run_data* run)
   printf("------------------\n");
   printw("with latin squares: %e\n", p_with_latin);
 
+  printw("finding K = %"PRIu64" rels\n", run->requiered_sets);
+
   if (run->use_multithreading)
-    printw("\nUsing run->sqULTITHREADED search with %zu threads\n", run->max_threads);
+    printw("\nUsing MULTITHREADED search with %zu threads\n", run->max_threads);
   else
     printw("\nUsing single-threaded search\n");
 
+  printw("Press [ENTER] to proceed...");
   getch();
 #else
   pow_m_sqr_printf(run->sq);
@@ -129,12 +132,14 @@ void show_starting_stats_on_square(run_data* run)
 
   printf("without latin squares: %e\n", p_no_latin);
   printf("with latin squares: %e\n", p_with_latin);
-#endif
+  printf("finding K = %"PRIu64" rels\n", run->requiered_sets);
 
   if (run->use_multithreading)
-    printf("\nUsing run->sqULTITHREADED search with %zu threads\n", run->max_threads);
+    printf("\nUsing MULTITHREADED search with %zu threads\n", run->max_threads);
   else
     printf("\nUsing single-threaded search\n");
+#endif
+
 
   return;
 }
@@ -222,6 +227,12 @@ int do_run(run_data* run)
     taxicab_init(&run->a, run->r, run->s, run->d);
     taxicab_init(&run->b, run->s, run->r, run->d);
 
+#ifndef __NO_GUI__
+    printw("finding taxicabs with p = %lf, sum = %"PRIu64"\n", run->min_proba, run->max_sum);
+    getch();
+#else
+    printf("finding taxicabs with p = %lf, sum = %"PRIu64"\n", run->min_proba, run->max_sum);
+#endif
     find_taxicabs_condition(run->a, run->b, run->min_proba, run->max_sum);
   }
   else

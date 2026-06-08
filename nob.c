@@ -21,22 +21,16 @@ Cmd cmd = {0};
 File_Paths deps = {0};
 bool debug = false;
 bool no_gui = false;
-bool flush_tables = true;
 int64_t count = -1;
 bool unit = false;
-bool tests = false;
 bool run = false;
 
 void usage(FILE* stream)
 {
-  fprintf(stream, "Usage: %s [OPTIONS] [TYPE] [COUNT]\n", flag_program_name());
+  fprintf(stream, "Usage: %s [OPTIONS] -- [ARGS]\n", flag_program_name());
   fprintf(stream, "OPTIONS:\n");
   flag_print_options(stream);
-  fprintf(stream, "TYPE:\n"
-                  "* leave empty for release\n"
-                  "* db: build with debug symbols (alias for -debug)\n"
-      );
-  fprintf(stream, "COUNT: integer: number of tuples to find\n");
+  fprintf(stream, "ARGS: to be passed to main. See main -help for more details\n");
 
   return;
 }
@@ -63,9 +57,6 @@ int cc_flags(Cmd* c)
     cmd_append(c, "-O3");
   if (no_gui)
     cmd_append(c, "-D__NO_GUI__");
-  if (flush_tables)
-    cmd_append(c, "-D__TABLE_FLUSHING__");
-
   return 1;
 }
 
@@ -105,13 +96,7 @@ int main(int argc, char** argv)
   flag_bool_var(&debug, "debug", false, "enables debug build");
   flag_bool_var(&no_gui, "no-gui", false, "disables the curses based GUI");
   flag_bool_var(&run, "run", false, "executes the build");
-  flag_bool_var(&flush_tables, "flush-tables", true, "enables \"experimental\" table flushing behaviour when no more rels have been found in a long time");
   flag_bool_var(&unit, "unit", false, "builds and runs unit tests");
-  flag_bool_var(&tests, "test", false, "run tests");
-  bool* use_multithreaded = flag_bool("mt", false, "use multithreaded for latin squares search");
-  size_t* threads = flag_size("threads", 0, "number of threads");
-  bool* new_taxicabs = flag_bool("new-taxicabs", false, "searches for new taxicabs, with expected number of diagonals min_proba");
-  double* min_proba = flag_double("min_proba", 0, "minimum expected number of diagonals");
 
   if (!flag_parse(argc, argv))
   {
@@ -122,17 +107,7 @@ int main(int argc, char** argv)
 
   argc = flag_rest_argc();
   argv = flag_rest_argv();
-
-  if (argc > 0)
-  {
-    const char* arg = shift(argv, argc);
-
-    if (strcmp(arg, "db") == 0)
-      debug = true;
-
-    // arg MUST be a number
-    count = atoi(arg);
-  }
+  // the rest of the args will be passed to main
 
   if (*help)
   {
@@ -185,14 +160,13 @@ int main(int argc, char** argv)
 
   if (debug)
     cmd_append(&cmd, "gdb");
-  cmd_append(&cmd, /* */"");
+  cmd_append(&cmd, get_trgt(BINDIR"main", "", "", ""));
 
-  if (count > 0)
-    cmd_append(&cmd, temp_sprintf("%"PRId64, count));
-  if (*new_taxicabs)
-    cmd_append(&cmd, "-n", temp_sprintf("%lf", *min_proba));
-  if (*use_multithreaded)
-    cmd_append(&cmd, "-mt","-t", temp_sprintf("%zu", *threads));
+  while (argc > 0)
+  {
+    char* arg = nob_shift(argv, argc);
+    cmd_append(&cmd, arg);
+  }
   if (!cmd_run(&cmd)) return 1;
 
   return 0;

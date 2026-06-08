@@ -849,14 +849,9 @@ void find_sets_collision_method(pow_m_sqr M, const uint32_t r, const uint32_t s,
 
     if (tries > MAX_ALLOWED_TRIES)
     {
-#ifdef __TABLE_FLUSHING__
       tries = 0;
       for (uint32_t k = PREFILL_CAP; k < n/2; ++k)
         empty_hshtbl(pack.tables + k);
-#else
-      fprintf(stderr, "No set (partial nor total) found for the last %u tries : aborting\n", MAX_ALLOWED_TRIES);
-      break;
-#endif
     }
 
     if (refresh_frames == 0)
