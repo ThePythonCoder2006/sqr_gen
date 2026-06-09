@@ -120,7 +120,6 @@ int main(int argc, char** argv)
   if (!mkdir_if_not_exists(BINDIR     )) return 1;
   if (!mkdir_if_not_exists(odir       )) return 1;
   if (!mkdir_if_not_exists("output"   )) return 1;
-  if (!mkdir_if_not_exists(MDIR"obj/" )) return 1;
 
   da_append(&deps, "nob.c");
   walk_dir(IDIR, deps_append_files_in_dir);
@@ -249,20 +248,6 @@ bool o_to_elf(Nob_Walk_Entry entry)
 bool build_main(const char* const name)
 {
   da_append(&deps, temp_sprintf(MDIR"%s.c", name));
-  if (needs_rebuild(get_trgt(temp_sprintf(MDIR"obj/%s", name),
-                   "-", "", ".o"), deps.items, deps.count))
-  {
-    // main -> .o
-    cmd_append(&cmd, "gcc");
-    cmd_append(&cmd, temp_sprintf(MDIR"%s.c", name));
-    cmd_append(&cmd, "-c");
-    cmd_append(&cmd, "-o",
-        get_trgt(temp_sprintf(MDIR"obj/%s", name),
-                     "-", "", ".o"));
-    cc_flags(&cmd);
-    i_flags(&cmd);
-    if (!cmd_run(&cmd)) return false;
-  }
 
   if (needs_rebuild(get_trgt(temp_sprintf(BINDIR"%s", name),
                    "-", "", ""  ), deps.items, deps.count))
@@ -270,13 +255,12 @@ bool build_main(const char* const name)
     // .os -> elf
     cmd_append(&cmd, "gcc");
     if (!walk_dir(odir, o_to_elf)) return false;
-    cmd_append(&cmd,
-        get_trgt(temp_sprintf(MDIR"obj/%s", name),
-                     "-", "", ".o"));
+    cmd_append(&cmd, temp_sprintf(MDIR"%s.c", name));
     cmd_append(&cmd, "-o",
         get_trgt(temp_sprintf(BINDIR"%s", name),
                      "-", "", ""  ));
     cc_flags(&cmd);
+    i_flags(&cmd);
     l_flags(&cmd);
     cmd_append(&cmd, "-lgmp");
 

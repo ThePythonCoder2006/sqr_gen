@@ -67,13 +67,15 @@ Options:
 
 ## Legacy build tool: `make`
 
+`make` by defaults builds `main` and main only. To build `viewer` define the `NAME` variable to `viewer`. Setting `NAME=main` achieves nothing, as it is it's default value.
+
 Compile and run with
 ```(shell)
-make
+make NAME=[name]
 ```
 
 Build with debug symbols and no curses:
 ```(shell)
-make db
+make db NAME=[name]
 ```
 
