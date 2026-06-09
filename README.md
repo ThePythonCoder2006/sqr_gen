@@ -2,6 +2,8 @@
 
 Generating magic squares of powers in c using the [taxicab method](https://wismuth.com/magic/squares-of-nth-powers.html).
 
+`main` searches for `r`x`s` magic squares of `d`-th power. You can change those parameter using the arguments `-r`, `-s` and `-d`
+
 By default tries to use the full taxicab method which includes the taxicab permutation. I have not been able to make this method work under the current implementation with my current hardware. One can produce square (whose size is sufficiently big) by using the O(mu) enabled by the `-no-taxi-method` flag of `main` and providing reasonable `-sum` parameter.
 
 Well optimized taxicabs for the taxicab method are provided (and used if `-new-taxi` is not enabled and sizes are correct) in `know`
